@@ -13,13 +13,15 @@ import {
   ReceiptText,
   ScanLine,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   WalletCards,
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { FinixChat } from "@/components/FinixChat";
+import { balanceSheet, cashFlow, incomeStatement, rp, totals } from "@/lib/financials";
+import finixMark from "@/assets/finix-mark.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -60,7 +62,7 @@ function Index() {
         {view === "home" && <HomeView onNavigate={navigate} onEntry={setEntry} />}
         {view === "reports" && <ReportsView />}
         {view === "scan" && <ScanView saved={saved} onSave={() => setSaved(true)} onClose={() => navigate("home")} />}
-        {view === "finix" && <FinixView />}
+        {view === "finix" && <FinixChat />}
         {view === "profile" && <ProfileView />}
         {view !== "scan" && <BottomNav active={view} onNavigate={navigate} />}
         {entry && <EntrySheet type={entry} onClose={() => setEntry(null)} />}
@@ -110,7 +112,7 @@ function HomeView({ onNavigate, onEntry }: { onNavigate: (view: View) => void; o
 
       <section className="mt-6 px-5">
         <button onClick={() => onNavigate("finix")} className="relative w-full overflow-hidden rounded-3xl bg-brand-dark p-6 text-left text-brand-dark-foreground transition-transform active:scale-[0.99]">
-          <div className="mb-4 flex items-center gap-2"><div className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground"><Sparkles size={15} /></div><p className="text-sm font-bold">Finix AI Analysis</p><ChevronRight className="ml-auto" size={18} /></div>
+          <div className="mb-4 flex items-center gap-2"><img src={finixMark} alt="" width={28} height={28} className="size-7 rounded-lg bg-card object-contain" /><p className="text-sm font-bold">Finix AI Analysis</p><ChevronRight className="ml-auto" size={18} /></div>
           <p className="text-sm leading-relaxed opacity-80">Bulan depan adalah Ramadan. Tambah stok <strong className="text-brand-dark-foreground">tepung terigu 20%</strong> berdasarkan tren penjualanmu.</p>
           <div className="mt-5 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card/10"><div className="h-full w-3/4 bg-primary" /></div><span className="text-[10px] opacity-60">Target laba 75%</span></div>
         </button>
