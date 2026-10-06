@@ -13,13 +13,15 @@ import {
   ReceiptText,
   ScanLine,
   ShieldCheck,
-  Sparkles,
   TrendingUp,
   WalletCards,
   X,
 } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import { FinixChat } from "@/components/FinixChat";
+import { balanceSheet, cashFlow, incomeStatement, rp, totals } from "@/lib/financials";
+import finixMark from "@/assets/finix-mark.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -60,7 +62,7 @@ function Index() {
         {view === "home" && <HomeView onNavigate={navigate} onEntry={setEntry} />}
         {view === "reports" && <ReportsView />}
         {view === "scan" && <ScanView saved={saved} onSave={() => setSaved(true)} onClose={() => navigate("home")} />}
-        {view === "finix" && <FinixView />}
+        {view === "finix" && <FinixChat />}
         {view === "profile" && <ProfileView />}
         {view !== "scan" && <BottomNav active={view} onNavigate={navigate} />}
         {entry && <EntrySheet type={entry} onClose={() => setEntry(null)} />}
@@ -110,7 +112,7 @@ function HomeView({ onNavigate, onEntry }: { onNavigate: (view: View) => void; o
 
       <section className="mt-6 px-5">
         <button onClick={() => onNavigate("finix")} className="relative w-full overflow-hidden rounded-3xl bg-brand-dark p-6 text-left text-brand-dark-foreground transition-transform active:scale-[0.99]">
-          <div className="mb-4 flex items-center gap-2"><div className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground"><Sparkles size={15} /></div><p className="text-sm font-bold">Finix AI Analysis</p><ChevronRight className="ml-auto" size={18} /></div>
+          <div className="mb-4 flex items-center gap-2"><img src={finixMark} alt="" width={28} height={28} className="size-7 rounded-lg bg-card object-contain" /><p className="text-sm font-bold">Finix AI Analysis</p><ChevronRight className="ml-auto" size={18} /></div>
           <p className="text-sm leading-relaxed opacity-80">Bulan depan adalah Ramadan. Tambah stok <strong className="text-brand-dark-foreground">tepung terigu 20%</strong> berdasarkan tren penjualanmu.</p>
           <div className="mt-5 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-card/10"><div className="h-full w-3/4 bg-primary" /></div><span className="text-[10px] opacity-60">Target laba 75%</span></div>
         </button>
@@ -129,8 +131,67 @@ function TransactionList({ items }: { items: typeof transactions }) {
 }
 
 function ReportsView() {
-  const bars = ["h-[35%]", "h-[62%]", "h-[48%]", "h-[82%]", "h-[55%]", "h-[94%]", "h-[75%]"];
-  return <main className="min-h-screen px-5 pb-28 pt-7"><p className="text-xs font-bold text-primary">LAPORAN JANUARI</p><h1 className="mt-1 text-2xl font-extrabold">Arus kas usahamu</h1><div className="mt-6 rounded-3xl bg-primary p-6 text-primary-foreground"><p className="text-sm opacity-70">Laba bersih</p><p className="mt-1 text-3xl font-bold">Rp1.100.000</p><div className="mt-7 flex h-32 items-end gap-3">{bars.map((height, index) => <div key={index} className={`flex-1 rounded-t-md bg-primary-foreground/30 ${height}`} />)}</div><div className="mt-2 flex justify-between text-[9px] opacity-60"><span>Sen</span><span>Rab</span><span>Jum</span><span>Min</span></div></div><h2 className="mb-3 mt-7 font-bold">Semua transaksi</h2><TransactionList items={transactions} /></main>;
+  const pct = (n: number) => `${((n / totals.revenue) * 100).toFixed(1)}%`;
+  const totalAssets = balanceSheet.assets.reduce((s, i) => s + i.value, 0);
+  const totalLiab = balanceSheet.liabilities.reduce((s, i) => s + i.value, 0);
+  const totalEquity = balanceSheet.equity.reduce((s, i) => s + i.value, 0);
+  const netCash = cashFlow.reduce((s, i) => s + i.value, 0);
+  return (
+    <main className="min-h-screen px-5 pb-28 pt-7">
+      <p className="text-xs font-bold text-primary">LAPORAN KEUANGAN</p>
+      <h1 className="mt-1 text-2xl font-extrabold">Viera Bakery</h1>
+      <p className="text-xs text-muted-foreground">Periode 1–31 Januari • dalam Rupiah</p>
+
+      <div className="mt-5 grid grid-cols-3 gap-2">
+        <Kpi label="Pendapatan" value={`${(totals.revenue / 1e6).toFixed(2)} jt`} />
+        <Kpi label="Margin kotor" value={pct(totals.gross)} />
+        <Kpi label="Margin bersih" value={pct(totals.net)} accent />
+      </div>
+
+      <Statement title="Laporan Laba Rugi" icon={<FileChartColumn size={16} />}>
+        <Group label="Pendapatan">{incomeStatement.revenue.map((r) => <Line key={r.label} label={r.label} value={r.value} />)}</Group>
+        <Group label="Harga pokok penjualan">{incomeStatement.cogs.map((r) => <Line key={r.label} label={r.label} value={-r.value} />)}</Group>
+        <Line label="Laba kotor" value={totals.gross} subtotal />
+        <Group label="Beban operasional">{incomeStatement.opex.map((r) => <Line key={r.label} label={r.label} value={-r.value} />)}</Group>
+        <Line label="Laba bersih" value={totals.net} total />
+      </Statement>
+
+      <Statement title="Laporan Arus Kas" icon={<WalletCards size={16} />}>
+        {cashFlow.map((c) => <Line key={c.label} label={c.label} value={c.value} />)}
+        <Line label="Kenaikan kas bersih" value={netCash} total />
+      </Statement>
+
+      <Statement title="Neraca Ringkas" icon={<Landmark size={16} />}>
+        <Group label="Aset">{balanceSheet.assets.map((r) => <Line key={r.label} label={r.label} value={r.value} />)}</Group>
+        <Line label="Total aset" value={totalAssets} subtotal />
+        <Group label="Kewajiban">{balanceSheet.liabilities.map((r) => <Line key={r.label} label={r.label} value={r.value} />)}</Group>
+        <Group label="Ekuitas">{balanceSheet.equity.map((r) => <Line key={r.label} label={r.label} value={r.value} />)}</Group>
+        <Line label="Total kewajiban + ekuitas" value={totalLiab + totalEquity} total />
+        <p className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-success"><ShieldCheck size={12} /> Neraca seimbang</p>
+      </Statement>
+
+      <h2 className="mb-3 mt-7 font-bold">Transaksi terakhir</h2>
+      <TransactionList items={transactions} />
+    </main>
+  );
+}
+
+function Kpi({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return <div className={`rounded-2xl p-3 ${accent ? "bg-primary text-primary-foreground" : "bg-muted"}`}><p className={`text-[10px] font-semibold ${accent ? "opacity-75" : "text-muted-foreground"}`}>{label}</p><p className="mt-1 text-sm font-extrabold">{value}</p></div>;
+}
+
+function Statement({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
+  return <section className="mt-5 rounded-3xl border border-border p-5"><h2 className="mb-3 flex items-center gap-2 text-sm font-extrabold"><span className="grid size-7 place-items-center rounded-lg bg-muted text-primary">{icon}</span>{title}</h2><div className="space-y-1">{children}</div></section>;
+}
+
+function Group({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="pt-2"><p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>{children}</div>;
+}
+
+function Line({ label, value, subtotal = false, total = false }: { label: string; value: number; subtotal?: boolean; total?: boolean }) {
+  const cls = total ? "mt-2 border-t-2 border-foreground pt-2 text-sm font-extrabold" : subtotal ? "mt-1 border-t border-border pt-2 text-sm font-bold" : "text-xs";
+  const color = total ? (value >= 0 ? "text-success" : "text-danger") : value < 0 ? "text-danger" : "";
+  return <div className={`flex justify-between gap-4 py-0.5 ${cls}`}><span className={total || subtotal ? "" : "text-muted-foreground"}>{label}</span><span className={`shrink-0 tabular-nums ${color}`}>{value < 0 ? `(${rp(-value)})` : rp(value)}</span></div>;
 }
 
 function ScanView({ saved, onSave, onClose }: { saved: boolean; onSave: () => void; onClose: () => void }) {
@@ -140,11 +201,6 @@ function ScanView({ saved, onSave, onClose }: { saved: boolean; onSave: () => vo
 
 function Row({ label, value, bold = false }: { label: string; value: string; bold?: boolean }) { return <div className={`flex justify-between gap-4 ${bold ? "font-bold" : ""}`}><span>{label}</span><span className="shrink-0">{value}</span></div>; }
 
-function FinixView() {
-  return <main className="min-h-screen px-5 pb-28 pt-7"><div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground"><Bot /></div><div><p className="text-xs font-bold text-primary">FINIX AI</p><h1 className="text-xl font-extrabold">Analisis mingguanmu</h1></div></div><div className="mt-7 rounded-3xl bg-brand-dark p-6 text-brand-dark-foreground"><p className="text-xs font-semibold opacity-60">RINGKASAN 1–7 JANUARI</p><h2 className="mt-3 text-2xl font-bold leading-tight">Pendapatan naik 10% dari minggu lalu.</h2><div className="mt-6 flex items-center gap-3 text-success"><TrendingUp /><span className="text-3xl font-bold">+Rp1,3 jt</span></div></div><h2 className="mb-3 mt-7 font-bold">Saran dari Finix</h2><div className="space-y-3"><Insight icon={<PackageCheck />} title="Tambah stok lebih awal" text="Permintaan roti meningkat menjelang Ramadan. Tambahkan stok tepung sekitar 20%."/><Insight icon={<WalletCards />} title="Jaga biaya operasional" text="Biaya jam makan siang meningkat. Sesuaikan jadwal produksi untuk menghemat pengeluaran."/></div><div className="mt-5 flex items-center gap-2 rounded-2xl border border-border bg-muted p-3"><input className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground" placeholder="Tanya Finix..."/><Button className="size-10 shrink-0 p-0" aria-label="Kirim pertanyaan"><ChevronRight size={18}/></Button></div></main>;
-}
-
-function Insight({ icon, title, text }: { icon: ReactNode; title: string; text: string }) { return <div className="rounded-2xl border border-border p-5"><div className="flex items-center gap-3 text-primary"><span>{icon}</span><h3 className="font-bold text-foreground">{title}</h3></div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">{text}</p></div>; }
 
 function ProfileView() { return <main className="min-h-screen px-5 pb-28 pt-10 text-center"><div className="mx-auto grid size-24 place-items-center rounded-full bg-muted text-primary"><CircleUserRound size={48}/></div><h1 className="mt-4 text-2xl font-extrabold">Viera Bakery</h1><p className="mt-1 text-sm text-muted-foreground">Paket Lite • aktif</p><div className="mt-8 space-y-3 text-left"><Row label="Kategori usaha" value="Makanan"/><Row label="Pencatatan bulan ini" value="24 transaksi"/><Row label="Status sinkronisasi" value="Aktif"/></div></main>; }
 
