@@ -129,8 +129,67 @@ function TransactionList({ items }: { items: typeof transactions }) {
 }
 
 function ReportsView() {
-  const bars = ["h-[35%]", "h-[62%]", "h-[48%]", "h-[82%]", "h-[55%]", "h-[94%]", "h-[75%]"];
-  return <main className="min-h-screen px-5 pb-28 pt-7"><p className="text-xs font-bold text-primary">LAPORAN JANUARI</p><h1 className="mt-1 text-2xl font-extrabold">Arus kas usahamu</h1><div className="mt-6 rounded-3xl bg-primary p-6 text-primary-foreground"><p className="text-sm opacity-70">Laba bersih</p><p className="mt-1 text-3xl font-bold">Rp1.100.000</p><div className="mt-7 flex h-32 items-end gap-3">{bars.map((height, index) => <div key={index} className={`flex-1 rounded-t-md bg-primary-foreground/30 ${height}`} />)}</div><div className="mt-2 flex justify-between text-[9px] opacity-60"><span>Sen</span><span>Rab</span><span>Jum</span><span>Min</span></div></div><h2 className="mb-3 mt-7 font-bold">Semua transaksi</h2><TransactionList items={transactions} /></main>;
+  const pct = (n: number) => `${((n / totals.revenue) * 100).toFixed(1)}%`;
+  const totalAssets = balanceSheet.assets.reduce((s, i) => s + i.value, 0);
+  const totalLiab = balanceSheet.liabilities.reduce((s, i) => s + i.value, 0);
+  const totalEquity = balanceSheet.equity.reduce((s, i) => s + i.value, 0);
+  const netCash = cashFlow.reduce((s, i) => s + i.value, 0);
+  return (
+    <main className="min-h-screen px-5 pb-28 pt-7">
+      <p className="text-xs font-bold text-primary">LAPORAN KEUANGAN</p>
+      <h1 className="mt-1 text-2xl font-extrabold">Viera Bakery</h1>
+      <p className="text-xs text-muted-foreground">Periode 1–31 Januari • dalam Rupiah</p>
+
+      <div className="mt-5 grid grid-cols-3 gap-2">
+        <Kpi label="Pendapatan" value={`${(totals.revenue / 1e6).toFixed(2)} jt`} />
+        <Kpi label="Margin kotor" value={pct(totals.gross)} />
+        <Kpi label="Margin bersih" value={pct(totals.net)} accent />
+      </div>
+
+      <Statement title="Laporan Laba Rugi" icon={<FileChartColumn size={16} />}>
+        <Group label="Pendapatan">{incomeStatement.revenue.map((r) => <Line key={r.label} label={r.label} value={r.value} />)}</Group>
+        <Group label="Harga pokok penjualan">{incomeStatement.cogs.map((r) => <Line key={r.label} label={r.label} value={-r.value} />)}</Group>
+        <Line label="Laba kotor" value={totals.gross} subtotal />
+        <Group label="Beban operasional">{incomeStatement.opex.map((r) => <Line key={r.label} label={r.label} value={-r.value} />)}</Group>
+        <Line label="Laba bersih" value={totals.net} total />
+      </Statement>
+
+      <Statement title="Laporan Arus Kas" icon={<WalletCards size={16} />}>
+        {cashFlow.map((c) => <Line key={c.label} label={c.label} value={c.value} />)}
+        <Line label="Kenaikan kas bersih" value={netCash} total />
+      </Statement>
+
+      <Statement title="Neraca Ringkas" icon={<Landmark size={16} />}>
+        <Group label="Aset">{balanceSheet.assets.map((r) => <Line key={r.label} label={r.label} value={r.value} />)}</Group>
+        <Line label="Total aset" value={totalAssets} subtotal />
+        <Group label="Kewajiban">{balanceSheet.liabilities.map((r) => <Line key={r.label} label={r.label} value={r.value} />)}</Group>
+        <Group label="Ekuitas">{balanceSheet.equity.map((r) => <Line key={r.label} label={r.label} value={r.value} />)}</Group>
+        <Line label="Total kewajiban + ekuitas" value={totalLiab + totalEquity} total />
+        <p className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-success"><ShieldCheck size={12} /> Neraca seimbang</p>
+      </Statement>
+
+      <h2 className="mb-3 mt-7 font-bold">Transaksi terakhir</h2>
+      <TransactionList items={transactions} />
+    </main>
+  );
+}
+
+function Kpi({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+  return <div className={`rounded-2xl p-3 ${accent ? "bg-primary text-primary-foreground" : "bg-muted"}`}><p className={`text-[10px] font-semibold ${accent ? "opacity-75" : "text-muted-foreground"}`}>{label}</p><p className="mt-1 text-sm font-extrabold">{value}</p></div>;
+}
+
+function Statement({ title, icon, children }: { title: string; icon: ReactNode; children: ReactNode }) {
+  return <section className="mt-5 rounded-3xl border border-border p-5"><h2 className="mb-3 flex items-center gap-2 text-sm font-extrabold"><span className="grid size-7 place-items-center rounded-lg bg-muted text-primary">{icon}</span>{title}</h2><div className="space-y-1">{children}</div></section>;
+}
+
+function Group({ label, children }: { label: string; children: ReactNode }) {
+  return <div className="pt-2"><p className="mb-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{label}</p>{children}</div>;
+}
+
+function Line({ label, value, subtotal = false, total = false }: { label: string; value: number; subtotal?: boolean; total?: boolean }) {
+  const cls = total ? "mt-2 border-t-2 border-foreground pt-2 text-sm font-extrabold" : subtotal ? "mt-1 border-t border-border pt-2 text-sm font-bold" : "text-xs";
+  const color = total ? (value >= 0 ? "text-success" : "text-danger") : value < 0 ? "text-danger" : "";
+  return <div className={`flex justify-between gap-4 py-0.5 ${cls}`}><span className={total || subtotal ? "" : "text-muted-foreground"}>{label}</span><span className={`shrink-0 tabular-nums ${color}`}>{value < 0 ? `(${rp(-value)})` : rp(value)}</span></div>;
 }
 
 function ScanView({ saved, onSave, onClose }: { saved: boolean; onSave: () => void; onClose: () => void }) {
