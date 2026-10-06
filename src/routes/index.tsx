@@ -18,7 +18,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
@@ -129,7 +129,8 @@ function TransactionList({ items }: { items: typeof transactions }) {
 }
 
 function ReportsView() {
-  return <main className="min-h-screen px-5 pb-28 pt-7"><p className="text-xs font-bold text-primary">LAPORAN JANUARI</p><h1 className="mt-1 text-2xl font-extrabold">Arus kas usahamu</h1><div className="mt-6 rounded-3xl bg-primary p-6 text-primary-foreground"><p className="text-sm opacity-70">Laba bersih</p><p className="mt-1 text-3xl font-bold">Rp1.100.000</p><div className="mt-7 flex h-32 items-end gap-3">{[35,62,48,82,55,94,75].map((height, index) => <div key={index} className="flex-1 rounded-t-md bg-primary-foreground/30" style={{ height: `${height}%` }} />)}</div><div className="mt-2 flex justify-between text-[9px] opacity-60"><span>Sen</span><span>Rab</span><span>Jum</span><span>Min</span></div></div><h2 className="mb-3 mt-7 font-bold">Semua transaksi</h2><TransactionList items={transactions} /></main>;
+  const bars = ["h-[35%]", "h-[62%]", "h-[48%]", "h-[82%]", "h-[55%]", "h-[94%]", "h-[75%]"];
+  return <main className="min-h-screen px-5 pb-28 pt-7"><p className="text-xs font-bold text-primary">LAPORAN JANUARI</p><h1 className="mt-1 text-2xl font-extrabold">Arus kas usahamu</h1><div className="mt-6 rounded-3xl bg-primary p-6 text-primary-foreground"><p className="text-sm opacity-70">Laba bersih</p><p className="mt-1 text-3xl font-bold">Rp1.100.000</p><div className="mt-7 flex h-32 items-end gap-3">{bars.map((height, index) => <div key={index} className={`flex-1 rounded-t-md bg-primary-foreground/30 ${height}`} />)}</div><div className="mt-2 flex justify-between text-[9px] opacity-60"><span>Sen</span><span>Rab</span><span>Jum</span><span>Min</span></div></div><h2 className="mb-3 mt-7 font-bold">Semua transaksi</h2><TransactionList items={transactions} /></main>;
 }
 
 function ScanView({ saved, onSave, onClose }: { saved: boolean; onSave: () => void; onClose: () => void }) {
@@ -143,7 +144,7 @@ function FinixView() {
   return <main className="min-h-screen px-5 pb-28 pt-7"><div className="flex items-center gap-3"><div className="grid size-11 place-items-center rounded-2xl bg-primary text-primary-foreground"><Bot /></div><div><p className="text-xs font-bold text-primary">FINIX AI</p><h1 className="text-xl font-extrabold">Analisis mingguanmu</h1></div></div><div className="mt-7 rounded-3xl bg-brand-dark p-6 text-brand-dark-foreground"><p className="text-xs font-semibold opacity-60">RINGKASAN 1–7 JANUARI</p><h2 className="mt-3 text-2xl font-bold leading-tight">Pendapatan naik 10% dari minggu lalu.</h2><div className="mt-6 flex items-center gap-3 text-success"><TrendingUp /><span className="text-3xl font-bold">+Rp1,3 jt</span></div></div><h2 className="mb-3 mt-7 font-bold">Saran dari Finix</h2><div className="space-y-3"><Insight icon={<PackageCheck />} title="Tambah stok lebih awal" text="Permintaan roti meningkat menjelang Ramadan. Tambahkan stok tepung sekitar 20%."/><Insight icon={<WalletCards />} title="Jaga biaya operasional" text="Biaya jam makan siang meningkat. Sesuaikan jadwal produksi untuk menghemat pengeluaran."/></div><div className="mt-5 flex items-center gap-2 rounded-2xl border border-border bg-muted p-3"><input className="min-w-0 flex-1 bg-transparent px-2 text-sm outline-none placeholder:text-muted-foreground" placeholder="Tanya Finix..."/><Button className="size-10 shrink-0 p-0" aria-label="Kirim pertanyaan"><ChevronRight size={18}/></Button></div></main>;
 }
 
-function Insight({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) { return <div className="rounded-2xl border border-border p-5"><div className="flex items-center gap-3 text-primary"><span>{icon}</span><h3 className="font-bold text-foreground">{title}</h3></div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">{text}</p></div>; }
+function Insight({ icon, title, text }: { icon: ReactNode; title: string; text: string }) { return <div className="rounded-2xl border border-border p-5"><div className="flex items-center gap-3 text-primary"><span>{icon}</span><h3 className="font-bold text-foreground">{title}</h3></div><p className="mt-3 text-sm leading-relaxed text-muted-foreground">{text}</p></div>; }
 
 function ProfileView() { return <main className="min-h-screen px-5 pb-28 pt-10 text-center"><div className="mx-auto grid size-24 place-items-center rounded-full bg-muted text-primary"><CircleUserRound size={48}/></div><h1 className="mt-4 text-2xl font-extrabold">Viera Bakery</h1><p className="mt-1 text-sm text-muted-foreground">Paket Lite • aktif</p><div className="mt-8 space-y-3 text-left"><Row label="Kategori usaha" value="Makanan"/><Row label="Pencatatan bulan ini" value="24 transaksi"/><Row label="Status sinkronisasi" value="Aktif"/></div></main>; }
 
@@ -153,8 +154,8 @@ function EntrySheet({ type, onClose }: { type: Exclude<EntryType, null>; onClose
 }
 
 function BottomNav({ active, onNavigate }: { active: View; onNavigate: (view: View) => void }) {
-  const items: Array<{ view: View; label: string; icon: React.ReactNode }> = [{view:"home",label:"Beranda",icon:<Home/>},{view:"reports",label:"Laporan",icon:<FileChartColumn/>},{view:"finix",label:"Finix",icon:<Bot/>},{view:"profile",label:"Profil",icon:<CircleUserRound/>}];
+  const items: Array<{ view: View; label: string; icon: ReactNode }> = [{view:"home",label:"Beranda",icon:<Home/>},{view:"reports",label:"Laporan",icon:<FileChartColumn/>},{view:"finix",label:"Finix",icon:<Bot/>},{view:"profile",label:"Profil",icon:<CircleUserRound/>}];
   return <nav className="absolute bottom-0 left-0 right-0 z-40 flex h-20 items-center justify-around border-t border-border bg-card/95 px-4 backdrop-blur"><NavButton item={items[0]} active={active} onNavigate={onNavigate}/><NavButton item={items[1]} active={active} onNavigate={onNavigate}/><Button className="-mt-9 size-16 rounded-2xl p-0 shadow-xl shadow-primary/30" onClick={() => onNavigate("scan")} aria-label="Pindai struk"><Camera size={25}/></Button><NavButton item={items[2]} active={active} onNavigate={onNavigate}/><NavButton item={items[3]} active={active} onNavigate={onNavigate}/></nav>;
 }
 
-function NavButton({ item, active, onNavigate }: { item: {view: View; label: string; icon: React.ReactNode}; active: View; onNavigate: (view: View) => void }) { const selected = active === item.view; return <Button variant="ghost" className={`h-14 w-14 flex-col gap-1 rounded-xl p-0 text-[9px] ${selected ? "text-primary" : "text-muted-foreground"}`} onClick={() => onNavigate(item.view)}>{item.icon}<span>{item.label}</span></Button>; }
+function NavButton({ item, active, onNavigate }: { item: {view: View; label: string; icon: ReactNode}; active: View; onNavigate: (view: View) => void }) { const selected = active === item.view; return <Button variant="ghost" className={`h-14 w-14 flex-col gap-1 rounded-xl p-0 text-[9px] ${selected ? "text-primary" : "text-muted-foreground"}`} onClick={() => onNavigate(item.view)}>{item.icon}<span>{item.label}</span></Button>; }
