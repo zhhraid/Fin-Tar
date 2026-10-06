@@ -154,8 +154,11 @@ function EntrySheet({ type, onClose }: { type: Exclude<EntryType, null>; onClose
 }
 
 function BottomNav({ active, onNavigate }: { active: View; onNavigate: (view: View) => void }) {
-  const items: Array<{ view: View; label: string; icon: ReactNode }> = [{view:"home",label:"Beranda",icon:<Home/>},{view:"reports",label:"Laporan",icon:<FileChartColumn/>},{view:"finix",label:"Finix",icon:<Bot/>},{view:"profile",label:"Profil",icon:<CircleUserRound/>}];
-  return <nav className="absolute bottom-0 left-0 right-0 z-40 flex h-20 items-center justify-around border-t border-border bg-card/95 px-4 backdrop-blur"><NavButton item={items[0]} active={active} onNavigate={onNavigate}/><NavButton item={items[1]} active={active} onNavigate={onNavigate}/><Button className="-mt-9 size-16 rounded-2xl p-0 shadow-xl shadow-primary/30" onClick={() => onNavigate("scan")} aria-label="Pindai struk"><Camera size={25}/></Button><NavButton item={items[2]} active={active} onNavigate={onNavigate}/><NavButton item={items[3]} active={active} onNavigate={onNavigate}/></nav>;
+  const homeItem = { view: "home" as View, label: "Beranda", icon: <Home /> };
+  const reportsItem = { view: "reports" as View, label: "Laporan", icon: <FileChartColumn /> };
+  const finixItem = { view: "finix" as View, label: "Finix", icon: <Bot /> };
+  const profileItem = { view: "profile" as View, label: "Profil", icon: <CircleUserRound /> };
+  return <nav className="absolute bottom-0 left-0 right-0 z-40 flex h-20 items-center justify-around border-t border-border bg-card/95 px-4 backdrop-blur"><NavButton item={homeItem} active={active} onNavigate={onNavigate}/><NavButton item={reportsItem} active={active} onNavigate={onNavigate}/><Button className="-mt-9 size-16 rounded-2xl p-0 shadow-xl shadow-primary/30" onClick={() => onNavigate("scan")} aria-label="Pindai struk"><Camera size={25}/></Button><NavButton item={finixItem} active={active} onNavigate={onNavigate}/><NavButton item={profileItem} active={active} onNavigate={onNavigate}/></nav>;
 }
 
 function NavButton({ item, active, onNavigate }: { item: {view: View; label: string; icon: ReactNode}; active: View; onNavigate: (view: View) => void }) { const selected = active === item.view; return <Button variant="ghost" className={`h-14 w-14 flex-col gap-1 rounded-xl p-0 text-[9px] ${selected ? "text-primary" : "text-muted-foreground"}`} onClick={() => onNavigate(item.view)}>{item.icon}<span>{item.label}</span></Button>; }
