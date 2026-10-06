@@ -42,7 +42,7 @@ Gunakan data keuangan berikut sebagai sumber utama. Jika data tidak tersedia, ka
 ${FINANCIAL_CONTEXT}`;
 
 export async function handleFinixChat(request: Request) {
-  const apiKey = process.env.LOVABLE_API_KEY;
+  const apiKey = process.env['LOVABLE_API_KEY'];
   if (!apiKey) return Response.json({ error: "AI belum dikonfigurasi." }, { status: 500 });
 
   let messages: UIMessage[];
