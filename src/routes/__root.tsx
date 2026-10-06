@@ -78,9 +78,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "FinPredict" },
+      { title: "FinTar" },
       { name: "description", content: "Kelola arus kas bisnis dan dapatkan insight keuangan dari Finix." },
-      { name: "author", content: "FinPredict" },
+      { name: "author", content: "FinTar" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],

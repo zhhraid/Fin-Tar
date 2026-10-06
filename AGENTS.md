@@ -9,4 +9,4 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
-- Keep the FinPredict prototype as a single mobile-first interactive surface; this preserves the reference workflow while avoiding premature backend architecture.
+- Keep the FinTar prototype as a single mobile-first interactive surface; this preserves the reference workflow while avoiding premature backend architecture.

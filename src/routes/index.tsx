@@ -24,9 +24,9 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "FinPredict — Keuangan Bisnis Lebih Terarah" },
+      { title: "FinTar — Keuangan Bisnis Lebih Terarah" },
       { name: "description", content: "Catat arus kas, pindai struk, dan dapatkan rekomendasi keuangan bisnis dari Finix AI." },
-      { property: "og:title", content: "FinPredict — Keuangan Bisnis Lebih Terarah" },
+      { property: "og:title", content: "FinTar — Keuangan Bisnis Lebih Terarah" },
       { property: "og:description", content: "Kelola arus kas UMKM dengan pencatatan cepat dan analisis Finix AI." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -76,7 +76,7 @@ function HomeView({ onNavigate, onEntry }: { onNavigate: (view: View) => void; o
         <div>
           <div className="flex items-center gap-2">
             <div className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground"><TrendingUp size={19} /></div>
-            <h1 className="text-xl font-extrabold text-primary">FinPredict</h1>
+            <h1 className="text-xl font-extrabold text-primary">FinTar</h1>
           </div>
           <p className="mt-1.5 text-xs font-medium text-muted-foreground">Viera Bakery <span className="mx-1">•</span> <span className="text-success">Online</span></p>
         </div>
