@@ -20,7 +20,8 @@ import {
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { FinixChat } from "@/components/FinixChat";
-import { balanceSheet, cashFlow, incomeStatement, rp, totals } from "@/lib/financials";
+import { cashAlerts, getStatements, periods, rp, totals, type PeriodKey } from "@/lib/financials";
+import { AlertCard, AlertsView, InsuranceView, LoanView } from "@/components/CopilotViews";
 import finixMark from "@/assets/finix-mark.png";
 
 export const Route = createFileRoute("/")({
@@ -37,7 +38,7 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type View = "home" | "reports" | "scan" | "finix" | "profile";
+type View = "home" | "reports" | "scan" | "finix" | "profile" | "loan" | "insurance" | "alerts";
 type EntryType = "income" | "expense" | null;
 
 const transactions = [
@@ -64,6 +65,9 @@ function Index() {
         {view === "scan" && <ScanView saved={saved} onSave={() => setSaved(true)} onClose={() => navigate("home")} />}
         {view === "finix" && <FinixChat />}
         {view === "profile" && <ProfileView />}
+        {view === "loan" && <LoanView onBack={() => navigate("home")} />}
+        {view === "insurance" && <InsuranceView onBack={() => navigate("home")} />}
+        {view === "alerts" && <AlertsView onBack={() => navigate("home")} onLoan={() => navigate("loan")} />}
         {view !== "scan" && <BottomNav active={view} onNavigate={navigate} />}
         {entry && <EntrySheet type={entry} onClose={() => setEntry(null)} />}
       </div>
@@ -80,9 +84,9 @@ function HomeView({ onNavigate, onEntry }: { onNavigate: (view: View) => void; o
             <div className="grid size-9 place-items-center rounded-xl bg-primary text-primary-foreground"><TrendingUp size={19} /></div>
             <h1 className="text-xl font-extrabold text-primary">FinTar</h1>
           </div>
-          <p className="mt-1.5 text-xs font-medium text-muted-foreground">Viera Bakery <span className="mx-1">•</span> <span className="text-success">Online</span></p>
+          <p className="mt-1.5 text-xs font-medium text-muted-foreground">Finance copilot • Viera Bakery</p>
         </div>
-        <Button variant="icon" className="relative size-10 rounded-full p-0" aria-label="Notifikasi">
+        <Button variant="icon" className="relative size-10 rounded-full p-0" aria-label="Peringatan kas" onClick={() => onNavigate("alerts")}>
           <Bell size={18} />
           <span className="absolute right-2 top-2 size-2 rounded-full bg-danger ring-2 ring-muted" />
         </Button>
@@ -91,7 +95,7 @@ function HomeView({ onNavigate, onEntry }: { onNavigate: (view: View) => void; o
       <section className="px-5 pt-2">
         <div className="rounded-3xl bg-primary p-6 text-primary-foreground shadow-xl shadow-primary/20">
           <div className="mb-6 flex items-start justify-between">
-            <div><p className="text-sm font-medium opacity-75">Saldo Saat Ini</p><h2 className="mt-1 text-3xl font-bold">Rp1.100.000</h2></div>
+            <div><p className="text-sm font-medium opacity-75">Profit Bulan Ini</p><h2 className="mt-1 text-3xl font-bold">{rp(totals.net)}</h2><p className="mt-1 text-[11px] opacity-75">Margin {((totals.net / totals.revenue) * 100).toFixed(1)}% • naik 10% dari bulan lalu</p></div>
             <span className="rounded-md bg-primary-foreground/15 px-2 py-1 text-[10px] font-bold uppercase">Lite Plan</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -106,8 +110,13 @@ function HomeView({ onNavigate, onEntry }: { onNavigate: (view: View) => void; o
       </section>
 
       <section className="mt-5 grid grid-cols-2 gap-3 px-5">
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><div className="grid size-10 place-items-center rounded-xl bg-success-soft text-success"><Landmark size={19} /></div><div><p className="text-xs font-bold">Pinjaman</p><p className="text-[10px] text-muted-foreground">Cek limit usaha</p></div></div>
-        <div className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4"><div className="grid size-10 place-items-center rounded-xl bg-muted text-primary"><ShieldCheck size={19} /></div><div><p className="text-xs font-bold">Asuransi</p><p className="text-[10px] text-muted-foreground">Proteksi toko</p></div></div>
+        <button onClick={() => onNavigate("loan")} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-success-soft text-success"><Landmark size={19} /></div><div><p className="text-xs font-bold">Ajukan Modal</p><p className="text-[10px] text-muted-foreground">Cocokkan pembiayaan</p></div></button>
+        <button onClick={() => onNavigate("insurance")} className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left transition-colors hover:border-primary"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-primary"><ShieldCheck size={19} /></div><div><p className="text-xs font-bold">Asuransi Toko</p><p className="text-[10px] text-muted-foreground">Cari perlindungan</p></div></button>
+      </section>
+
+      <section className="mt-6 px-5">
+        <div className="mb-3 flex items-end justify-between"><h3 className="font-bold">Peringatan Arus Kas</h3><Button variant="ghost" className="h-auto p-0 text-xs text-primary" onClick={() => onNavigate("alerts")}>Lihat {cashAlerts.length}</Button></div>
+        <AlertCard alert={cashAlerts[0]} />
       </section>
 
       <section className="mt-6 px-5">
@@ -131,6 +140,9 @@ function TransactionList({ items }: { items: typeof transactions }) {
 }
 
 function ReportsView() {
+  const [period, setPeriod] = useState<PeriodKey>("month");
+  const { incomeStatement, totals, cashFlow, balanceSheet } = getStatements(period);
+  const current = periods.find((p) => p.key === period)!;
   const pct = (n: number) => `${((n / totals.revenue) * 100).toFixed(1)}%`;
   const totalAssets = balanceSheet.assets.reduce((s, i) => s + i.value, 0);
   const totalLiab = balanceSheet.liabilities.reduce((s, i) => s + i.value, 0);
@@ -140,7 +152,8 @@ function ReportsView() {
     <main className="min-h-screen px-5 pb-28 pt-7">
       <p className="text-xs font-bold text-primary">LAPORAN KEUANGAN</p>
       <h1 className="mt-1 text-2xl font-extrabold">Viera Bakery</h1>
-      <p className="text-xs text-muted-foreground">Periode 1–31 Januari • dalam Rupiah</p>
+      <p className="text-xs text-muted-foreground">Periode {current.range} • dalam Rupiah</p>
+      <div className="mt-4 grid grid-cols-4 gap-1 rounded-2xl bg-muted p-1">{periods.map((p) => <button key={p.key} onClick={() => setPeriod(p.key)} className={`rounded-xl py-2 text-[11px] font-bold transition-colors ${p.key === period ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}>{p.label}</button>)}</div>
 
       <div className="mt-5 grid grid-cols-3 gap-2">
         <Kpi label="Pendapatan" value={`${(totals.revenue / 1e6).toFixed(2)} jt`} />
