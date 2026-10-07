@@ -34,9 +34,9 @@ const lenders = [
 ];
 
 export function LoanView({ onBack }: { onBack: () => void }) {
-  const [amount, setAmount] = useState(10000000);
+  const [amount, setAmount] = useState(5000000);
   const [purpose, setPurpose] = useState("Tambah stok");
-  const [tenor, setTenor] = useState(12);
+  const [tenor, setTenor] = useState(24);
   const monthlyProfit = totals.net;
 
   const matches = lenders
