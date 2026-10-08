@@ -1,6 +1,6 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { FINANCIAL_CONTEXT } from "./financials";
+import { buildFinancialContext } from "./financials";
 
 const RUN_ID_HEADER = "X-Lovable-AIG-Run-ID";
 
@@ -35,21 +35,21 @@ function createRunIdFetch(initialRunId?: string) {
   };
 }
 
-const SYSTEM = `Kamu adalah Finix, finance copilot AI di aplikasi FinTar untuk pemilik usaha kecil. Kamu membantu pemilik Viera Bakery dengan: mencocokkan opsi pembiayaan/modal, mengelola arus kas dan peringatannya, rekomendasi asuransi toko, serta analisis keuangan bisnis.
+const SYSTEM_BASE = `Kamu adalah Finix, finance copilot AI di aplikasi FinTar untuk pemilik usaha kecil. Kamu membantu pemilik Viera Bakery dengan: mencocokkan opsi pembiayaan/modal, mengelola arus kas dan peringatannya, rekomendasi asuransi toko, serta analisis keuangan bisnis.
 Jawab dalam Bahasa Indonesia yang santai tapi profesional, ringkas (maksimal ~150 kata kecuali diminta detail), gunakan markdown (poin, tebal) bila membantu. Gunakan format Rupiah seperti Rp1.100.000.
-Gunakan data keuangan berikut sebagai sumber utama. Jika data tidak tersedia, katakan terus terang dan beri saran umum.
-
-${FINANCIAL_CONTEXT}`;
+Gunakan data keuangan berikut sebagai sumber utama. Jika data tidak tersedia, katakan terus terang dan beri saran umum.`;
 
 export async function handleFinixChat(request: Request) {
   const apiKey = process.env['LOVABLE_API_KEY'];
   if (!apiKey) return Response.json({ error: "AI belum dikonfigurasi." }, { status: 500 });
 
   let messages: UIMessage[];
+  let context: string;
   try {
-    const body = (await request.json()) as { messages?: unknown };
+    const body = (await request.json()) as { messages?: unknown; context?: unknown };
     if (!Array.isArray(body.messages)) throw new Error("invalid");
     messages = body.messages as UIMessage[];
+    context = typeof body.context === "string" && body.context.length < 8000 ? body.context : buildFinancialContext([]);
   } catch {
     return Response.json({ error: "Permintaan tidak valid." }, { status: 400 });
   }
@@ -64,7 +64,7 @@ export async function handleFinixChat(request: Request) {
 
   const result = streamText({
     model: provider.responses("openai/gpt-6-astra"),
-    instructions: SYSTEM,
+    instructions: `${SYSTEM_BASE}\n\n${context}`,
     messages: await convertToModelMessages(messages),
     abortSignal: request.signal,
     providerOptions: {

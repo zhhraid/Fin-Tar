@@ -2,7 +2,7 @@ import { AlertTriangle, ArrowLeft, BadgeCheck, CheckCircle2, Flame, HeartPulse, 
 import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { cashAlerts, rp, totals } from "@/lib/financials";
+import { cashAlerts, getStatements, rp, useLedger } from "@/lib/financials";
 
 function Header({ eyebrow, title, onBack }: { eyebrow: string; title: string; onBack: () => void }) {
   return (
@@ -37,7 +37,7 @@ export function LoanView({ onBack }: { onBack: () => void }) {
   const [amount, setAmount] = useState(5000000);
   const [purpose, setPurpose] = useState("Tambah stok");
   const [tenor, setTenor] = useState(24);
-  const monthlyProfit = totals.net;
+  const monthlyProfit = Math.max(1, getStatements(useLedger(), "month").totals.net);
 
   const matches = lenders
     .map((l) => {
@@ -115,6 +115,7 @@ const plans = [
 export function InsuranceView({ onBack }: { onBack: () => void }) {
   const [picked, setPicked] = useState<string[]>(["fire", "theft"]);
   const [assetValue, setAssetValue] = useState(10000000);
+  const totals = { net: Math.max(1, getStatements(useLedger(), "month").totals.net) };
   const toggle = (k: string) => setPicked((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
 
   const results = plans

@@ -8,6 +8,7 @@ import { Message, MessageContent, MessageResponse } from "@/components/ai-elemen
 import { PromptInput, PromptInputFooter, PromptInputSubmit, PromptInputTextarea } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
+import { buildFinancialContext, useLedger } from "@/lib/financials";
 import finixMark from "@/assets/finix-mark.png";
 
 const STORAGE_KEY = "fintar-finix-chat";
@@ -30,10 +31,13 @@ function loadMessages(): UIMessage[] {
 export function FinixChat() {
   const initial = useMemo(loadMessages, []);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const ledger = useLedger();
+  const ledgerRef = useRef(ledger);
+  ledgerRef.current = ledger;
   const { messages, sendMessage, status, stop, setMessages, error } = useChat({
     id: "finix",
     messages: initial,
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
+    transport: new DefaultChatTransport({ api: "/api/chat", body: () => ({ context: buildFinancialContext(ledgerRef.current) }) }),
     onError: (e) => toast.error(e.message || "Finix gagal menjawab. Coba lagi."),
   });
   const busy = status === "submitted" || status === "streaming";
