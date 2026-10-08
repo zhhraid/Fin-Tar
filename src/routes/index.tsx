@@ -8,10 +8,7 @@ import {
   FileChartColumn,
   Home,
   Landmark,
-  PackageCheck,
   Plus,
-  ReceiptText,
-  ScanLine,
   ShieldCheck,
   TrendingUp,
   WalletCards,
@@ -20,6 +17,7 @@ import {
 import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { FinixChat } from "@/components/FinixChat";
+import { ScanView } from "@/components/ScanView";
 import { cashAlerts, getStatements, periods, rp, totals, type PeriodKey } from "@/lib/financials";
 import { AlertCard, AlertsView, InsuranceView, LoanView } from "@/components/CopilotViews";
 import finixMark from "@/assets/finix-mark.png";
@@ -50,11 +48,9 @@ const transactions = [
 function Index() {
   const [view, setView] = useState<View>("home");
   const [entry, setEntry] = useState<EntryType>(null);
-  const [saved, setSaved] = useState(false);
 
   const navigate = (next: View) => {
     setView(next);
-    setSaved(false);
   };
 
   return (
@@ -62,7 +58,7 @@ function Index() {
       <div className="relative mx-auto min-h-screen w-full max-w-md overflow-hidden bg-card shadow-2xl sm:min-h-[880px] sm:rounded-[2rem] sm:border sm:border-border">
         {view === "home" && <HomeView onNavigate={navigate} onEntry={setEntry} />}
         {view === "reports" && <ReportsView />}
-        {view === "scan" && <ScanView saved={saved} onSave={() => setSaved(true)} onClose={() => navigate("home")} />}
+        {view === "scan" && <ScanView onClose={() => navigate("home")} />}
         {view === "finix" && <FinixChat />}
         {view === "profile" && <ProfileView />}
         {view === "loan" && <LoanView onBack={() => navigate("home")} />}
@@ -205,11 +201,6 @@ function Line({ label, value, subtotal = false, total = false }: { label: string
   const cls = total ? "mt-2 border-t-2 border-foreground pt-2 text-sm font-extrabold" : subtotal ? "mt-1 border-t border-border pt-2 text-sm font-bold" : "text-xs";
   const color = total ? (value >= 0 ? "text-success" : "text-danger") : value < 0 ? "text-danger" : "";
   return <div className={`flex justify-between gap-4 py-0.5 ${cls}`}><span className={total || subtotal ? "" : "text-muted-foreground"}>{label}</span><span className={`shrink-0 tabular-nums ${color}`}>{value < 0 ? `(${rp(-value)})` : rp(value)}</span></div>;
-}
-
-function ScanView({ saved, onSave, onClose }: { saved: boolean; onSave: () => void; onClose: () => void }) {
-  if (saved) return <main className="grid min-h-screen place-items-center bg-background p-8 text-center"><div><div className="mx-auto grid size-20 place-items-center rounded-full bg-success-soft text-success"><PackageCheck size={38} /></div><h1 className="mt-5 text-2xl font-extrabold">Transaksi tersimpan</h1><p className="mt-2 text-sm leading-relaxed text-muted-foreground">Data struk sudah masuk ke laporan pengeluaran Januari.</p><Button className="mt-7 h-12 w-full" onClick={onClose}>Kembali ke beranda</Button></div></main>;
-  return <main className="min-h-screen bg-brand-dark text-brand-dark-foreground"><header className="flex items-center justify-between p-5"><div><p className="text-xs font-bold text-primary">PEMINDAI STRUK</p><h1 className="mt-1 text-lg font-bold">Arahkan kamera ke nota</h1></div><Button variant="ghost" className="size-10 rounded-full p-0 text-brand-dark-foreground hover:bg-card/10 hover:text-brand-dark-foreground" onClick={onClose} aria-label="Tutup"><X /></Button></header><div className="px-5"><div className="relative h-80 overflow-hidden rounded-3xl border border-card/20 bg-card/5"><div className="absolute inset-8 rounded-lg border-2 border-primary"><span className="absolute left-3 top-3 text-xs font-semibold">ORDER #A099</span><div className="animate-scan-line absolute left-0 right-0 top-10 h-0.5 bg-primary shadow-lg shadow-primary" /><ReceiptText className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-20" size={96} /></div></div><p className="mt-3 text-center text-xs opacity-60">Struk terdeteksi • pastikan tulisan terlihat jelas</p></div><section className="mt-6 rounded-t-[2rem] bg-card p-6 text-foreground"><div className="mb-5 flex items-center gap-3"><div className="grid size-10 place-items-center rounded-xl bg-success-soft text-success"><ScanLine /></div><div><h2 className="font-bold">Data berhasil dibaca</h2><p className="text-xs text-muted-foreground">Periksa sebelum disimpan</p></div></div><div className="space-y-3 text-sm"><Row label="Tepung terigu 1 kg × 72" value="Rp2.360.000"/><Row label="Telur per kg × 56" value="Rp760.000"/><Row label="Cokelat × 32" value="Rp2.540.000"/><div className="border-t border-border pt-3"><Row label="Jumlah total" value="Rp6.393.600" bold /></div></div><Button className="mt-6 h-12 w-full" onClick={onSave}>Konfirmasi & simpan</Button></section></main>;
 }
 
 function Row({ label, value, bold = false }: { label: string; value: string; bold?: boolean }) { return <div className={`flex justify-between gap-4 ${bold ? "font-bold" : ""}`}><span>{label}</span><span className="shrink-0">{value}</span></div>; }
