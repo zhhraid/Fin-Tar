@@ -1,7 +1,7 @@
 import { Camera, ImageUp, Loader2, PackageCheck, ReceiptText, ScanLine, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { rp } from "@/lib/financials";
+import { addTransaction, rp } from "@/lib/financials";
 
 type ScanResult = { merchant: string; date: string; items: { name: string; qty: number; price: number }[]; total: number };
 
@@ -95,7 +95,7 @@ export function ScanView({ onClose }: { onClose: () => void }) {
             ))}
             <div className="flex justify-between gap-4 border-t border-border pt-3 font-bold"><span>Jumlah total</span><span className="tabular-nums">{rp(result.total)}</span></div>
           </div>
-          <Button className="mt-6 h-12 w-full" onClick={() => setSaved(true)}>Konfirmasi & simpan</Button>
+          <Button className="mt-6 h-12 w-full" onClick={() => { addTransaction({ title: result.merchant ? `Struk ${result.merchant}` : "Belanja dari struk", amount: result.total, type: "expense", category: "Bahan baku", source: "scan" }); setSaved(true); }}>Konfirmasi & simpan</Button>
         </section>
       )}
     </main>
