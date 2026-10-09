@@ -18,7 +18,7 @@ import { useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { FinixChat } from "@/components/FinixChat";
 import { ScanView } from "@/components/ScanView";
-import { cashAlerts, getStatements, periods, rp, totals, type PeriodKey } from "@/lib/financials";
+import { addTransaction, cashAlerts, expenseCategories, getStatements, incomeCategories, periodRange, periods, removeTransaction, rp, useLedger, type Category, type PeriodKey, type Tx } from "@/lib/financials";
 import { AlertCard, AlertsView, InsuranceView, LoanView } from "@/components/CopilotViews";
 import finixMark from "@/assets/finix-mark.png";
 
@@ -39,11 +39,6 @@ export const Route = createFileRoute("/")({
 type View = "home" | "reports" | "scan" | "finix" | "profile" | "loan" | "insurance" | "alerts";
 type EntryType = "income" | "expense" | null;
 
-const transactions = [
-  { id: "#099", title: "Restok Bahan Baku", date: "4 Jan • 14:20", amount: "-Rp245.000", type: "expense" },
-  { id: "#098", title: "Penjualan Harian", date: "3 Jan • 20:05", amount: "+Rp890.000", type: "income" },
-  { id: "#097", title: "Biaya Pengiriman", date: "2 Jan • 16:45", amount: "-Rp85.000", type: "expense" },
-];
 
 function Index() {
   const [view, setView] = useState<View>("home");
@@ -72,6 +67,9 @@ function Index() {
 }
 
 function HomeView({ onNavigate, onEntry }: { onNavigate: (view: View) => void; onEntry: (type: EntryType) => void }) {
+  const ledger = useLedger();
+  const { totals } = getStatements(ledger, "month");
+  const recent = [...ledger].sort((a, b) => b.date.localeCompare(a.date));
   return (
     <main className="pb-28">
       <header className="flex items-center justify-between px-5 pb-4 pt-6">
@@ -91,12 +89,12 @@ function HomeView({ onNavigate, onEntry }: { onNavigate: (view: View) => void; o
       <section className="px-5 pt-2">
         <div className="rounded-3xl bg-primary p-6 text-primary-foreground shadow-xl shadow-primary/20">
           <div className="mb-6 flex items-start justify-between">
-            <div><p className="text-sm font-medium opacity-75">Profit Bulan Ini</p><h2 className="mt-1 text-3xl font-bold">{rp(totals.net)}</h2><p className="mt-1 text-[11px] opacity-75">Margin {((totals.net / totals.revenue) * 100).toFixed(1)}% • naik 10% dari bulan lalu</p></div>
+            <div><p className="text-sm font-medium opacity-75">Profit Bulan Ini</p><h2 className="mt-1 text-3xl font-bold">{rp(totals.net)}</h2><p className="mt-1 text-[11px] opacity-75">Margin {totals.revenue ? ((totals.net / totals.revenue) * 100).toFixed(1) : "0"}% dari pemasukan bulan ini</p></div>
             <span className="rounded-md bg-primary-foreground/15 px-2 py-1 text-[10px] font-bold uppercase">Lite Plan</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-primary-foreground/10 p-3"><p className="text-[10px] uppercase opacity-70">Pemasukan</p><p className="mt-1 text-sm font-bold">+Rp2.907k</p></div>
-            <div className="rounded-xl bg-primary-foreground/10 p-3"><p className="text-[10px] uppercase opacity-70">Pengeluaran</p><p className="mt-1 text-sm font-bold">-Rp1.807k</p></div>
+            <div className="rounded-xl bg-primary-foreground/10 p-3"><p className="text-[10px] uppercase opacity-70">Pemasukan</p><p className="mt-1 text-sm font-bold">+{rp(totals.revenue)}</p></div>
+            <div className="rounded-xl bg-primary-foreground/10 p-3"><p className="text-[10px] uppercase opacity-70">Pengeluaran</p><p className="mt-1 text-sm font-bold">-{rp(totals.expense)}</p></div>
           </div>
           <div className="mt-4 grid grid-cols-2 gap-2">
             <Button variant="secondary" className="h-11 border-primary-foreground/20 bg-primary-foreground text-xs text-primary" onClick={() => onEntry("income")}><Plus size={15} /> Pemasukan</Button>
@@ -125,21 +123,23 @@ function HomeView({ onNavigate, onEntry }: { onNavigate: (view: View) => void; o
 
       <section className="mt-7 px-5">
         <div className="mb-3 flex items-end justify-between"><h3 className="font-bold">Riwayat Cashflow</h3><Button variant="ghost" className="h-auto p-0 text-xs text-primary" onClick={() => onNavigate("reports")}>Lihat Semua</Button></div>
-        <TransactionList items={transactions.slice(0, 2)} />
+        <TransactionList items={recent.slice(0, 3)} />
       </section>
     </main>
   );
 }
 
-function TransactionList({ items }: { items: typeof transactions }) {
-  return <div className="space-y-2">{items.map((item) => <div key={item.id} className="flex items-center justify-between rounded-2xl border border-border p-4"><div className="flex min-w-0 items-center gap-3"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-[10px] font-bold text-muted-foreground">{item.id}</div><div className="min-w-0"><p className="truncate text-sm font-bold">{item.title}</p><p className="text-[10px] text-muted-foreground">{item.date}</p></div></div><p className={`ml-2 shrink-0 text-sm font-bold ${item.type === "income" ? "text-success" : "text-danger"}`}>{item.amount}</p></div>)}</div>;
+function TransactionList({ items, removable = false }: { items: Tx[]; removable?: boolean }) {
+  if (!items.length) return <p className="rounded-2xl bg-muted p-4 text-center text-xs text-muted-foreground">Belum ada transaksi di periode ini.</p>;
+  return <div className="space-y-2">{items.map((item) => <div key={item.id} className="flex items-center justify-between rounded-2xl border border-border p-4"><div className="flex min-w-0 items-center gap-3"><div className={`grid size-10 shrink-0 place-items-center rounded-xl ${item.type === "income" ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>{item.source === "scan" ? <ReceiptText size={17} /> : item.type === "income" ? <TrendingUp size={17} /> : <WalletCards size={17} />}</div><div className="min-w-0"><p className="truncate text-sm font-bold">{item.title}</p><p className="text-[10px] text-muted-foreground">{item.category} • {new Date(item.date).toLocaleDateString("id-ID", { day: "numeric", month: "short" })}</p></div></div><div className="ml-2 flex shrink-0 items-center gap-1"><p className={`text-sm font-bold ${item.type === "income" ? "text-success" : "text-danger"}`}>{item.type === "income" ? "+" : "-"}{rp(item.amount)}</p>{removable && <button aria-label={`Hapus ${item.title}`} onClick={() => removeTransaction(item.id)} className="grid size-7 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-danger"><X size={14} /></button>}</div></div>)}</div>;
 }
 
 function ReportsView() {
   const [period, setPeriod] = useState<PeriodKey>("month");
-  const { incomeStatement, totals, cashFlow, balanceSheet } = getStatements(period);
-  const current = periods.find((p) => p.key === period)!;
-  const pct = (n: number) => `${((n / totals.revenue) * 100).toFixed(1)}%`;
+  const ledger = useLedger();
+  const { txs, incomeStatement, totals, cashFlow, balanceSheet } = getStatements(ledger, period);
+  const range = periodRange(period);
+  const pct = (n: number) => (totals.revenue ? `${((n / totals.revenue) * 100).toFixed(1)}%` : "0%");
   const totalAssets = balanceSheet.assets.reduce((s, i) => s + i.value, 0);
   const totalLiab = balanceSheet.liabilities.reduce((s, i) => s + i.value, 0);
   const totalEquity = balanceSheet.equity.reduce((s, i) => s + i.value, 0);
@@ -148,7 +148,7 @@ function ReportsView() {
     <main className="min-h-screen px-5 pb-28 pt-7">
       <p className="text-xs font-bold text-primary">LAPORAN KEUANGAN</p>
       <h1 className="mt-1 text-2xl font-extrabold">Viera Bakery</h1>
-      <p className="text-xs text-muted-foreground">Periode {current.range} • dalam Rupiah</p>
+      <p className="text-xs text-muted-foreground">Periode {range.label} • {txs.length} transaksi</p>
       <div className="mt-4 grid grid-cols-4 gap-1 rounded-2xl bg-muted p-1">{periods.map((p) => <button key={p.key} onClick={() => setPeriod(p.key)} className={`rounded-xl py-2 text-[11px] font-bold transition-colors ${p.key === period ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}>{p.label}</button>)}</div>
 
       <div className="mt-5 grid grid-cols-3 gap-2">
@@ -179,8 +179,8 @@ function ReportsView() {
         <p className="mt-2 flex items-center gap-1.5 text-[10px] font-semibold text-success"><ShieldCheck size={12} /> Neraca seimbang</p>
       </Statement>
 
-      <h2 className="mb-3 mt-7 font-bold">Transaksi terakhir</h2>
-      <TransactionList items={transactions} />
+      <h2 className="mb-3 mt-7 font-bold">Transaksi periode ini</h2>
+      <TransactionList removable items={[...txs].sort((a, b) => b.date.localeCompare(a.date))} />
     </main>
   );
 }
@@ -206,11 +206,25 @@ function Line({ label, value, subtotal = false, total = false }: { label: string
 function Row({ label, value, bold = false }: { label: string; value: string; bold?: boolean }) { return <div className={`flex justify-between gap-4 ${bold ? "font-bold" : ""}`}><span>{label}</span><span className="shrink-0">{value}</span></div>; }
 
 
-function ProfileView() { return <main className="min-h-screen px-5 pb-28 pt-10 text-center"><div className="mx-auto grid size-24 place-items-center rounded-full bg-muted text-primary"><CircleUserRound size={48}/></div><h1 className="mt-4 text-2xl font-extrabold">Viera Bakery</h1><p className="mt-1 text-sm text-muted-foreground">Paket Lite • aktif</p><div className="mt-8 space-y-3 text-left"><Row label="Kategori usaha" value="Makanan"/><Row label="Pencatatan bulan ini" value="24 transaksi"/><Row label="Status sinkronisasi" value="Aktif"/></div></main>; }
+function ProfileView() { return <main className="min-h-screen px-5 pb-28 pt-10 text-center"><div className="mx-auto grid size-24 place-items-center rounded-full bg-muted text-primary"><CircleUserRound size={48}/></div><h1 className="mt-4 text-2xl font-extrabold">Viera Bakery</h1><p className="mt-1 text-sm text-muted-foreground">Paket Lite • aktif</p><div className="mt-8 space-y-3 text-left"><Row label="Kategori usaha" value="Makanan"/><Row label="Total transaksi tercatat" value={`${useLedger().length} transaksi`}/><Row label="Status sinkronisasi" value="Aktif"/></div></main>; }
 
 function EntrySheet({ type, onClose }: { type: Exclude<EntryType, null>; onClose: () => void }) {
   const income = type === "income";
-  return <div className="absolute inset-0 z-50 flex items-end bg-foreground/30 backdrop-blur-sm"><div className="w-full rounded-t-[2rem] bg-card p-6 shadow-2xl"><div className="flex items-center justify-between"><div><p className={`text-xs font-bold ${income ? "text-success" : "text-danger"}`}>{income ? "PEMASUKAN" : "PENGELUARAN"}</p><h2 className="mt-1 text-xl font-extrabold">Tambah transaksi</h2></div><Button variant="icon" className="size-10 rounded-full p-0" onClick={onClose}><X size={18}/></Button></div><label className="mt-6 block text-xs font-bold text-muted-foreground">JUMLAH</label><div className="mt-2 flex items-center rounded-2xl border border-border px-4"><span className="font-bold">Rp</span><input autoFocus inputMode="numeric" className="h-14 min-w-0 flex-1 px-3 text-xl font-bold outline-none" placeholder="0" /></div><label className="mt-4 block text-xs font-bold text-muted-foreground">KETERANGAN</label><input className="mt-2 h-12 w-full rounded-2xl border border-border px-4 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder={income ? "Contoh: Penjualan harian" : "Contoh: Belanja bahan baku"}/><Button className="mt-6 h-12 w-full" onClick={onClose}>Simpan transaksi</Button></div></div>;
+  const cats = income ? incomeCategories : expenseCategories;
+  const [amount, setAmount] = useState("");
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState<Category>(cats[0]!);
+  const value = Number(amount.replace(/\D/g, ""));
+  const save = () => {
+    if (!value) return;
+    addTransaction({ title: title.trim().slice(0, 80) || category, amount: value, type, category, source: "manual" });
+    onClose();
+  };
+  return <div className="absolute inset-0 z-50 flex items-end bg-foreground/30 backdrop-blur-sm"><div className="w-full rounded-t-[2rem] bg-card p-6 shadow-2xl"><div className="flex items-center justify-between"><div><p className={`text-xs font-bold ${income ? "text-success" : "text-danger"}`}>{income ? "PEMASUKAN" : "PENGELUARAN"}</p><h2 className="mt-1 text-xl font-extrabold">Tambah transaksi</h2></div><Button variant="icon" className="size-10 rounded-full p-0" onClick={onClose} aria-label="Tutup"><X size={18}/></Button></div>
+    <label className="mt-6 block text-xs font-bold text-muted-foreground">JUMLAH</label><div className="mt-2 flex items-center rounded-2xl border border-border px-4"><span className="font-bold">Rp</span><input autoFocus inputMode="numeric" value={value ? value.toLocaleString("id-ID") : ""} onChange={(e) => setAmount(e.target.value.slice(0, 15))} className="h-14 min-w-0 flex-1 bg-transparent px-3 text-xl font-bold outline-none" placeholder="0" /></div>
+    <label className="mt-4 block text-xs font-bold text-muted-foreground">KATEGORI</label><div className="mt-2 flex flex-wrap gap-2">{cats.map((c) => <button key={c} onClick={() => setCategory(c)} className={`rounded-xl border px-3 py-2 text-xs font-bold ${c === category ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{c}</button>)}</div>
+    <label className="mt-4 block text-xs font-bold text-muted-foreground">KETERANGAN</label><input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} className="mt-2 h-12 w-full rounded-2xl border border-border bg-transparent px-4 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder={income ? "Contoh: Penjualan harian" : "Contoh: Belanja bahan baku"}/>
+    <Button className="mt-6 h-12 w-full" disabled={!value} onClick={save}>Simpan transaksi</Button></div></div>;
 }
 
 function BottomNav({ active, onNavigate }: { active: View; onNavigate: (view: View) => void }) {
