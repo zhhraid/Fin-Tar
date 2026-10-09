@@ -9,6 +9,7 @@ import {
   Home,
   Landmark,
   Plus,
+  ReceiptText,
   ShieldCheck,
   TrendingUp,
   WalletCards,
