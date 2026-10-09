@@ -16,7 +16,6 @@ dist-ssr
 .nitro
 *.local
 .env
-package-lock.json
 
 # Wrangler / Cloudflare
 .wrangler/

@@ -1,12 +1,4 @@
-<!-- LOVABLE:BEGIN -->
-> [!IMPORTANT]
-> This project is connected to [Lovable](https://lovable.dev). Avoid rewriting
-> published git history — force pushing, or rebasing/amending/squashing commits
-> that are already pushed — as it rewrites history on Lovable's side and the
-> user will likely lose their project history.
->
-> Commits you push to the connected branch sync back to Lovable and show up in
-> the editor, so keep the branch in a working state.
-<!-- LOVABLE:END -->
-
-- Keep the FinTar prototype as a single mobile-first interactive surface; this preserves the reference workflow while avoiding premature backend architecture.
+- Keep FinTar as a single mobile-first interactive surface (one route, views switched in state); this preserves the reference workflow.
+- Supabase is optional. Without `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` the app must keep working with data stored on the device.
+- AI calls go through `src/lib/ai.server.ts` only, so keys stay on the server. Without a key the app must keep working in demo mode.
+- Database changes go in a new file under `supabase/migrations/`; every table needs Row Level Security.

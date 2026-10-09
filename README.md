@@ -42,7 +42,7 @@ Langkah penyiapan (sekali saja):
 4. Untuk demo, buka **Authentication > Sign In / Providers > Email** dan matikan **Confirm email** supaya pendaftar langsung masuk. Jika dibiarkan aktif, pendaftar harus membuka tautan di email dulu.
 5. Jalankan ulang `npm run dev`. Layar pertama sekarang adalah halaman masuk.
 
-Di hosting (Lovable atau lainnya), isi variabel yang sama di pengaturan environment, lalu build ulang.
+Di hosting, isi variabel yang sama di pengaturan environment lalu build ulang (lihat bagian Deploy).
 
 | Tabel | Isi |
 |---|---|
@@ -81,6 +81,18 @@ npx tsc --noEmit
 npm run build
 ```
 
-## Lovable
+## Deploy
 
-Proyek ini terhubung ke [Lovable](https://lovable.dev/projects/5ff2a793-85b8-4659-879c-9d4121c3c75e). Commit ke `main` ikut tersinkron ke sana, jadi jangan menulis ulang riwayat git yang sudah di-push.
+Aplikasi ini punya server (untuk AI dan halaman awal), jadi butuh hosting yang bisa menjalankan Node.js atau fungsi serverless, bukan hosting berkas statis.
+
+```sh
+npm run build    # hasil di folder .output
+npm start        # menjalankan server Node di port 3000 (ubah dengan variabel PORT)
+```
+
+- **Vercel, Netlify, Cloudflare:** sambungkan repositori ini; perintah build `npm run build`. Platform dikenali otomatis saat build, tanpa konfigurasi tambahan.
+- **Server sendiri (VPS, Railway, Render):** jalankan `npm run build` lalu `npm start`.
+
+Isi variabel dari `.env.example` di pengaturan environment hosting. Berkas `.env` hanya dibaca saat `npm run dev`. Variabel berawalan `VITE_` ikut tertanam saat build, jadi build ulang setelah mengubahnya.
+
+Supaya login berfungsi di alamat hosting, tambahkan alamat itu di Supabase: **Authentication > URL Configuration > Site URL**.
