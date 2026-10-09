@@ -13,6 +13,7 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
+import { startPwa } from "../lib/pwa";
 
 function NotFoundComponent() {
   return (
@@ -82,6 +83,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "FinTar" },
       { name: "description", content: "Kelola arus kas bisnis dan dapatkan insight keuangan dari Finix." },
       { name: "author", content: "FinTar" },
+      { name: "theme-color", content: "#2563eb" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "FinTar" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -94,6 +98,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" },
       { rel: "icon", href: "/favicon.png", type: "image/png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootShell,
@@ -104,7 +110,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="id">
       <head>
         <HeadContent />
       </head>
@@ -118,6 +124,7 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(startPwa, []);
 
   return (
     <QueryClientProvider client={queryClient}>

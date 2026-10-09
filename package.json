@@ -17,8 +17,8 @@
     "rolldown": "1.2.1"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.83",
     "@ai-sdk/react": "^4.0.130",
+    "@anthropic-ai/sdk": "^0.132.1",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
@@ -50,6 +50,7 @@
     "@streamdown/code": "^2.0.0",
     "@streamdown/math": "^1.0.3",
     "@streamdown/mermaid": "^1.0.3",
+    "@supabase/supabase-js": "^2.117.3",
     "@tailwindcss/vite": "^4.2.1",
     "@tanstack/react-query": "^5.101.1",
     "@tanstack/react-router": "1.170.41",
@@ -62,6 +63,8 @@
     "date-fns": "^4.1.0",
     "embla-carousel-react": "^8.6.0",
     "input-otp": "^1.4.2",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "lucide-react": "^0.575.0",
     "motion": "^14.0.0",
     "nanoid": "^6.0.1",

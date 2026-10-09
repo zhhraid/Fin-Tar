@@ -1,0 +1,17 @@
+{
+  "name": "FinTar — Keuangan Bisnis Lebih Terarah",
+  "short_name": "FinTar",
+  "description": "Catat arus kas, pindai struk, dan dapatkan laporan serta saran keuangan untuk UMKM.",
+  "lang": "id",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
