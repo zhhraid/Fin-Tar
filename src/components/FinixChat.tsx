@@ -10,14 +10,10 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import { authHeaders } from "@/lib/cloud";
 import { logActivity, rollingDays, rp, summarize, updateProfile, useLedger, usePlanned, useProfile } from "@/lib/financials";
+import { useTranslation } from "@/lib/i18n";
 import finixMark from "@/assets/finix-mark.png";
 
 const STORAGE_KEY = "fintar-finix-chat";
-const SUGGESTIONS = [
-  "Gimana kondisi keuanganku saat ini?",
-  "Biaya mana yang bisa aku hemat?",
-  "Apakah aku siap mengajukan modal?",
-];
 const TARGETS = [10, 20, 30];
 
 function loadMessages(): UIMessage[] {
@@ -36,6 +32,7 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
   const ledger = useLedger();
   const profile = useProfile();
   const planned = usePlanned();
+  const { t, lang } = useTranslation();
   const dataRef = useRef({ ledger, profile, planned });
   dataRef.current = { ledger, profile, planned };
   const [picking, setPicking] = useState(false);
@@ -44,9 +41,11 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
     id: "finix",
     messages: initial,
     transport: new DefaultChatTransport({ api: "/api/chat", body: () => dataRef.current, headers: authHeaders }),
-    onError: (e) => toast.error(e.message || "Finix gagal menjawab. Coba lagi."),
+    onError: (e) => toast.error(e.message || (lang === "en" ? "Finix failed to answer. Please try again." : "Finix gagal menjawab. Coba lagi.")),
   });
   const busy = status === "submitted" || status === "streaming";
+
+  const suggestions = [t("sug1"), t("sug2"), t("sug3")];
 
   useEffect(() => {
     if (status === "ready" || status === "error") {
@@ -60,9 +59,9 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
     sendMessage({ text });
   };
   const send = (text: string) => {
-    const t = text.trim();
-    if (!t || busy) return;
-    ask(t);
+    const textStr = text.trim();
+    if (!textStr || busy) return;
+    ask(textStr);
   };
 
   // A prompt handed over from another screen (e.g. "Tanya Finix" on a report) is sent once.
@@ -87,7 +86,7 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
       updateProfile({ target: { pct, amount } });
       logActivity({ tool: "set_target", tier: "T1", status: "approved", summary: `Target omzet dipasang: naik ${pct}% menjadi ${rp(amount)}` });
     }
-    send(`Aku mau omzet bulan depan naik ${pct}%. Bantu buat rencananya.`);
+    send(lang === "en" ? `I want next month's revenue to grow by ${pct}%. Help me create an actionable plan.` : `Aku mau omzet bulan depan naik ${pct}%. Bantu buat rencananya.`);
   };
 
   const reset = () => {
@@ -101,15 +100,15 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
   const waiting = busy && (last?.role === "user" || !last?.parts.some((p) => p.type === "text" && p.text));
 
   return (
-    <main className="flex h-[100dvh] flex-col pb-20 sm:h-[880px]">
+    <main className="flex h-full min-h-0 flex-1 flex-col pb-2">
       <header className="flex items-center gap-3 border-b border-border px-5 pb-4 pt-6">
         <img src={finixMark} alt="Finix" width={44} height={44} className="size-11 rounded-2xl bg-muted object-contain p-0.5" />
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-extrabold leading-tight">Finix</h1>
-          <p className="truncate text-xs text-muted-foreground"><span className="text-success">●</span> Asisten keuangan {profile.name}{demo ? " • mode demo" : ""}</p>
+          <p className="truncate text-xs text-muted-foreground"><span className="text-success">●</span> {t("finixOnline", { name: profile.name })}{demo ? ` • ${t("finixDemoMode")}` : ""}</p>
         </div>
         {messages.length > 0 && (
-          <Button variant="icon" size="icon" className="rounded-full" onClick={reset} aria-label="Mulai obrolan baru"><RotateCcw size={16} /></Button>
+          <Button variant="icon" size="icon" className="rounded-full" onClick={reset} aria-label={t("startNewChatAria")}><RotateCcw size={16} /></Button>
         )}
       </header>
 
@@ -118,11 +117,11 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
           {messages.length === 0 && (
             <div className="flex flex-col items-center pt-6 text-center">
               <img src={finixMark} alt="" width={96} height={96} className="size-24 object-contain" />
-              <h2 className="mt-3 text-lg font-extrabold">Halo, aku Finix!</h2>
-              <p className="mt-1 max-w-64 text-sm text-muted-foreground">Aku membaca catatan transaksimu. Tanya soal laporan, arus kas, atau target usahamu.</p>
-              {demo && <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">Mode demo: AI belum aktif, jadi jawabanku dihitung langsung dari catatanmu dengan rumus sederhana.</p>}
+              <h2 className="mt-3 text-lg font-extrabold">{t("helloFinix")}</h2>
+              <p className="mt-1 max-w-64 text-sm text-muted-foreground">{t("finixIntroText")}</p>
+              {demo && <p className="mt-3 rounded-xl bg-muted px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">{t("finixDemoNotice")}</p>}
               <div className="mt-6 flex w-full flex-col gap-2">
-                {SUGGESTIONS.map((s) => (
+                {suggestions.map((s) => (
                   <button key={s} onClick={() => send(s)} className="rounded-2xl border border-border bg-card px-4 py-3 text-left text-sm font-medium transition-colors hover:border-primary hover:text-primary">{s}</button>
                 ))}
               </div>
@@ -139,8 +138,8 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
               </MessageContent>
             </Message>
           ))}
-          {waiting && <div className="text-sm"><Shimmer>Finix sedang menganalisis...</Shimmer></div>}
-          {error && !busy && <p className="text-xs text-danger">{error.message || "Terjadi kesalahan."}</p>}
+          {waiting && <div className="text-sm"><Shimmer>{t("finixAnalyzing")}</Shimmer></div>}
+          {error && !busy && <p className="text-xs text-danger">{error.message || (lang === "en" ? "An error occurred." : "Terjadi kesalahan.")}</p>}
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
@@ -149,23 +148,23 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
         <div className="mb-2 flex items-center gap-2 overflow-x-auto pb-1">
           {picking ? (
             <>
-              <span className="shrink-0 text-[11px] font-bold text-muted-foreground">Naik berapa?</span>
-              {TARGETS.map((t) => (
-                <button key={t} disabled={busy} onClick={() => setTarget(t)} className="shrink-0 rounded-full border border-primary px-3 py-1.5 text-xs font-bold text-primary disabled:opacity-50">{t}%{revenue30 > 0 ? ` · ${rp(revenue30 * (1 + t / 100))}` : ""}</button>
+              <span className="shrink-0 text-[11px] font-bold text-muted-foreground">{t("howMuchIncrease")}</span>
+              {TARGETS.map((targetPct) => (
+                <button key={targetPct} disabled={busy} onClick={() => setTarget(targetPct)} className="shrink-0 rounded-full border border-primary px-3 py-1.5 text-xs font-bold text-primary disabled:opacity-50">{targetPct}%{revenue30 > 0 ? ` · ${rp(revenue30 * (1 + targetPct / 100))}` : ""}</button>
               ))}
-              <button onClick={() => setPicking(false)} className="shrink-0 px-2 text-xs text-muted-foreground">Batal</button>
+              <button onClick={() => setPicking(false)} className="shrink-0 px-2 text-xs text-muted-foreground">{t("cancel")}</button>
             </>
           ) : (
             <>
-              <button onClick={() => setPicking(true)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"><Target size={13} /> Pasang target</button>
-              {messages.length > 0 && SUGGESTIONS.map((s) => (
+              <button onClick={() => setPicking(true)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground"><Target size={13} /> {t("setTargetBtn")}</button>
+              {messages.length > 0 && suggestions.map((s) => (
                 <button key={s} disabled={busy} onClick={() => send(s)} className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground disabled:opacity-50">{s}</button>
               ))}
             </>
           )}
         </div>
         <PromptInput onSubmit={({ text }) => send(text)}>
-          <PromptInputTextarea ref={textareaRef} autoFocus placeholder="Tanya Finix..." />
+          <PromptInputTextarea ref={textareaRef} autoFocus placeholder={t("askFinixPlaceholder")} />
           <PromptInputFooter className="justify-end">
             <PromptInputSubmit status={status} onStop={stop} />
           </PromptInputFooter>

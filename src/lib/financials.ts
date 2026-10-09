@@ -252,6 +252,13 @@ export function addPlanned(p: Omit<Planned, "id" | "done">) {
   planned.set([...planned.get(), row]);
   push((r) => r.upsertPlanned(row));
 }
+export function updatePlanned(id: string, patch: Partial<Omit<Planned, "id">>) {
+  const row = planned.get().find((p) => p.id === id);
+  if (!row) return;
+  const next = { ...row, ...patch };
+  planned.set(planned.get().map((p) => (p.id === id ? next : p)));
+  push((r) => r.upsertPlanned(next));
+}
 export function removePlanned(id: string) {
   const row = planned.get().find((p) => p.id === id);
   planned.set(planned.get().filter((p) => p.id !== id));

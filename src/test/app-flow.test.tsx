@@ -132,9 +132,38 @@ describe("alur utama FinTar", () => {
     press("Profil");
     fireEvent.change(screen.getByLabelText("Nama usaha"), { target: { value: "Toko Uji" } });
     fireEvent.change(screen.getByLabelText("Kas awal sebelum mencatat"), { target: { value: "100000000" } });
+    press("Simpan");
     press("Beranda");
 
     expect(screen.getByText(/Asisten keuangan • Toko Uji/)).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: /^Rp10\d\.\d{3}\.\d{3}$/ })).toBeInTheDocument();
   });
+
+  it("dapat mengubah bahasa ke English dan menerjemahkan komponen di seluruh aplikasi", () => {
+    render(<App />);
+    press("Profil");
+    press("English");
+
+    expect(screen.getByText("Business name")).toBeInTheDocument();
+    expect(screen.getByText("Opening balances for balance sheet")).toBeInTheDocument();
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.getByText("Reports")).toBeInTheDocument();
+
+    press("Home");
+    expect(screen.getByText("Current cash balance")).toBeInTheDocument();
+    expect(screen.getByText("Funding Match")).toBeInTheDocument();
+    expect(screen.getByText("Shop Insurance")).toBeInTheDocument();
+
+    press("Reports");
+    expect(screen.getByText("FINANCIAL REPORTS")).toBeInTheDocument();
+    expect(screen.getByText("Profit & Loss Statement")).toBeInTheDocument();
+    expect(screen.getByText("Cash Flow Statement")).toBeInTheDocument();
+
+    // Kembalikan ke Bahasa Indonesia
+    press("Profile");
+    press("Bahasa Indonesia");
+    expect(screen.getByText("Nama usaha")).toBeInTheDocument();
+    expect(screen.getByText("Beranda")).toBeInTheDocument();
+  });
 });
+
