@@ -1,5 +1,5 @@
-import { AlertTriangle, Camera, ImageUp, Info, Loader2, PackageCheck, PencilLine, Plus, ReceiptText, ScanLine, Trash2, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { AlertTriangle, Camera, ImageUp, Loader2, PackageCheck, PencilLine, Plus, ReceiptText, ScanLine, Trash2, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ConsentGate } from "@/components/ConsentGate";
 import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
@@ -28,6 +28,11 @@ export function ScanView({ onClose, onManual }: { onClose: () => void; onManual:
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saved, setSaved] = useState(false);
+  // True when the server has no AI key: every scan then returns the built-in sample.
+  const [demoMode, setDemoMode] = useState(false);
+  useEffect(() => {
+    fetch("/api/chat").then((r) => r.json()).then((d: { ai?: boolean }) => setDemoMode(!d.ai)).catch(() => {});
+  }, []);
 
   const handleFile = async (file?: File) => {
     if (!file) return;
@@ -104,9 +109,12 @@ export function ScanView({ onClose, onManual }: { onClose: () => void; onManual:
             <Button variant="secondary" className="h-12" onClick={() => galleryRef.current?.click()} disabled={loading}><ImageUp size={18} /> Dari galeri</Button>
           </div>
           {error && <p className="mt-3 rounded-xl bg-danger-soft px-4 py-3 text-xs font-semibold text-danger">{error}</p>}
+          {!draft && demoMode && (
+            <p role="alert" className="mt-3 flex gap-2 rounded-xl border border-danger/40 bg-danger-soft px-4 py-3 text-xs font-semibold leading-relaxed text-danger"><AlertTriangle size={14} className="mt-0.5 shrink-0" /> AI pembaca struk belum aktif. Foto apa pun akan menampilkan contoh, bukan isi strukmu.</p>
+          )}
           {!draft && (
             <>
-              {!photo && !error && <p className="mt-3 text-center text-xs opacity-60">Pastikan seluruh struk terlihat dan tulisannya jelas</p>}
+              {!photo && !error && !demoMode && <p className="mt-3 text-center text-xs opacity-60">Pastikan seluruh struk terlihat dan tulisannya jelas</p>}
               <div className="[&_button]:text-brand-dark-foreground [&_button:hover]:bg-card/10 [&_button:hover]:text-brand-dark-foreground">{manual}</div>
             </>
           )}
@@ -119,7 +127,12 @@ export function ScanView({ onClose, onManual }: { onClose: () => void; onManual:
             <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-success-soft text-success"><ScanLine /></div>
             <div><h2 className="font-bold">Cocokkan dengan strukmu</h2><p className="text-xs text-muted-foreground">Hasil bacaan bisa keliru. Ubah yang salah sebelum disimpan.</p></div>
           </div>
-          {draft.demo && <p className="mt-4 flex gap-2 rounded-xl bg-muted px-4 py-3 text-xs leading-relaxed text-muted-foreground"><Info size={14} className="mt-0.5 shrink-0 text-primary" /> Mode demo: AI pembaca struk belum aktif, jadi ini contoh hasil bacaan, bukan isi fotomu.</p>}
+          {draft.demo && (
+            <div role="alert" className="mt-4 flex gap-3 rounded-2xl border border-danger/40 bg-danger-soft p-4 text-danger">
+              <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+              <div><p className="text-sm font-extrabold">Ini contoh, bukan isi strukmu</p><p className="mt-1 text-xs leading-relaxed">AI pembaca struk belum aktif, jadi fotomu tidak dibaca. Barang dan harga di bawah hanya contoh. Hapus dan isi sendiri, atau aktifkan AI dengan mengisi kunci di berkas .env.</p></div>
+            </div>
+          )}
           {unsure > 0 && <p className="mt-4 flex gap-2 rounded-xl bg-danger-soft px-4 py-3 text-xs font-semibold leading-relaxed text-danger"><AlertTriangle size={14} className="mt-0.5 shrink-0" /> {unsure} baris kurang jelas terbaca. Periksa baris yang ditandai.</p>}
 
           <Label>Jenis transaksi</Label>

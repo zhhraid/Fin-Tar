@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 
 import { Route } from "@/routes/index";
 
-// Device mode (no Supabase configured). The chat screen talks to the server; these flows never open it.
+// Device mode, whatever the developer's own .env says.
+vi.mock("@/lib/env", () => ({ cloudEnabled: false, supabaseUrl: "", supabaseAnonKey: "" }));
+// The chat screen talks to the server; these flows never open it.
 vi.mock("@/components/FinixChat", () => ({ FinixChat: ({ prompt }: { prompt?: string | null }) => <p>Finix: {prompt}</p> }));
 
 const App = Route.options.component!;
