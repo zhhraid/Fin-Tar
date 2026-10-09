@@ -12,12 +12,16 @@ export async function authorizeAi(request: Request): Promise<Response | null> {
   const token = /^Bearer (.+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
   if (!token) return deny("Masuk dulu untuk memakai fitur AI.", 401);
   const headers = { apikey: supabaseAnonKey, authorization: `Bearer ${token}` };
+  // One query answers both questions: Supabase rejects an invalid or expired token with 401,
+  // and Row Level Security limits the rows to the caller's own consent history.
+  // Short timeout plus one retry, so a stalled connection cannot hang the user's request.
+  const url = `${supabaseUrl}/rest/v1/consents?select=granted&type=eq.ai_processing&order=timestamp.desc&limit=1`;
+  const get = () => fetch(url, { headers, signal: AbortSignal.timeout(6000) });
   try {
-    const user = await fetch(`${supabaseUrl}/auth/v1/user`, { headers });
-    if (!user.ok) return deny("Sesi berakhir. Silakan masuk lagi.", 401);
-    // Row Level Security limits this query to the caller's own consent rows.
-    const res = await fetch(`${supabaseUrl}/rest/v1/consents?select=granted&type=eq.ai_processing&order=timestamp.desc&limit=1`, { headers });
-    const rows = res.ok ? ((await res.json()) as { granted?: boolean }[]) : [];
+    const res = await get().catch(get);
+    if (res.status === 401 || res.status === 403) return deny("Sesi berakhir. Silakan masuk lagi.", 401);
+    if (!res.ok) return deny("Tidak bisa memeriksa akun. Coba lagi.", 503);
+    const rows = (await res.json()) as { granted?: boolean }[];
     if (rows[0]?.granted !== true) return deny("Izin pemrosesan AI belum diberikan.", 403);
     return null;
   } catch {

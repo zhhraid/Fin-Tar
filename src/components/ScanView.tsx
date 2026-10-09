@@ -10,14 +10,15 @@ type Item = { name: string; qty: number; price: number; unsure?: boolean };
 type ScanResult = { merchant: string; date: string; items: Item[]; total: number; category: Category; demo?: boolean };
 type Draft = { merchant: string; date: string; items: Item[]; total: number; category: Category; type: Tx["type"]; demo: boolean };
 
+// Receipts stay readable at this size, and a smaller upload is what makes the scan fast on mobile data.
 async function toDataUrl(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+  const scale = Math.min(1, 1400 / Math.max(bitmap.width, bitmap.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
   canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL("image/jpeg", 0.85);
+  return canvas.toDataURL("image/jpeg", 0.8);
 }
 
 export function ScanView({ onClose, onManual }: { onClose: () => void; onManual: () => void }) {

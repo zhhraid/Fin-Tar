@@ -66,12 +66,12 @@ Finix dan pemindai struk memanggil AI dari server ([src/lib/ai.server.ts](src/li
 | Variabel | Keterangan |
 |---|---|
 | `ANTHROPIC_API_KEY` | Kunci Claude dari [platform.claude.com](https://platform.claude.com). Model bawaan `claude-opus-5-5`, bisa diganti dengan `ANTHROPIC_MODEL`. |
-| `GEMINI_API_KEY` | Kunci Gemini dari [aistudio.google.com](https://aistudio.google.com). Model bawaan `gemini-flash-latest`, bisa diganti dengan `GEMINI_MODEL`. |
+| `GEMINI_API_KEY` | Kunci Gemini dari [aistudio.google.com](https://aistudio.google.com). Model bawaan `gemini-flash-lite-latest`, bisa diganti dengan `GEMINI_MODEL`. Bila model itu sibuk atau kuotanya habis, aplikasi otomatis mencoba `GEMINI_FALLBACK_MODEL` (bawaan `gemini-flash-latest`). |
 | `AI_PROVIDER` | `claude` atau `gemini`. Hanya perlu jika kedua kunci diisi; tanpa ini Claude yang dipakai. |
 
 Tanpa kunci, aplikasi berjalan dalam mode demo: Finix menjawab dengan rumus dari catatan transaksi dan pemindai struk menampilkan contoh hasil bacaan. Keduanya diberi label "mode demo" di layar.
 
-Paket gratis Gemini dapat memakai data yang dikirim untuk pengembangan layanannya. Pakai data contoh saat demo dengan kunci gratis.
+Paket gratis Gemini punya batas harian per model (model `flash` hanya 20 permintaan per hari saat ini ditulis; batas terkini ada di [ai.dev/rate-limit](https://ai.dev/rate-limit)) dan dapat memakai data yang dikirim untuk pengembangan layanannya. Pakai data contoh saat demo dengan kunci gratis.
 
 ## Pemeriksaan
 

@@ -95,6 +95,38 @@ describe("alur utama FinTar", () => {
     expect(screen.getByText(/Draf proposal Rp5\.000\.000 untuk/)).toBeInTheDocument();
   });
 
+  it("mengajukan paket asuransi, menjadwalkan preminya, lalu membatalkan", () => {
+    render(<App />);
+    fireEvent.click(screen.getByText("Asuransi Toko"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Pilih paket" })[0]!);
+
+    expect(screen.getByText("Ringkasan perlindungan")).toBeInTheDocument();
+    const send = screen.getByRole("button", { name: "Ajukan paket ini" });
+    expect(send).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(send);
+
+    expect(screen.getByText("Paket yang kamu ajukan")).toBeInTheDocument();
+    expect(screen.getByText("Pengajuan diterima")).toBeInTheDocument();
+    press(/Jadwalkan premi Rp20\.000/);
+    expect(screen.getByText(/sudah ada di daftar kewajiban/)).toBeInTheDocument();
+
+    // Pilihan tetap ada saat layar dibuka lagi, dan preminya masuk daftar kewajiban
+    press("Kembali");
+    press("Peringatan kas");
+    expect(screen.getByText("Premi Proteksi Toko Plus")).toBeInTheDocument();
+    press("Kembali");
+    fireEvent.click(screen.getByText("Asuransi Toko"));
+    expect(screen.getByText("Paket yang kamu ajukan")).toBeInTheDocument();
+
+    press("Batalkan dan pilih paket lain");
+    expect(screen.getByText("Paket yang direkomendasikan")).toBeInTheDocument();
+    press("Profil");
+    fireEvent.click(screen.getByText("Log aktivitas & hapus data"));
+    expect(screen.getByText(/Paket asuransi Proteksi Toko Plus diajukan, premi Rp20\.000\/bulan/)).toBeInTheDocument();
+    expect(screen.getByText("Pengajuan paket asuransi dibatalkan")).toBeInTheDocument();
+  });
+
   it("memakai saldo awal dari profil untuk saldo kas", () => {
     render(<App />);
     press("Profil");

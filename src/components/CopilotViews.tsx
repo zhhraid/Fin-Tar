@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
 import { exportProposalPdf } from "@/lib/export";
-import { addPlanned, clearLoan, dateInputValue, daysUntil, forecastCash, getCreditProfile, getInsights, loanStage, loanStages, logActivity, openPlanned, payableTotal, removePlanned, rp, settlePlanned, shortDate, submitLoan, useLedger, useLoanApplication, usePlanned, useProfile, type Insight, type LoanApplication, type Planned } from "@/lib/financials";
+import { addPlanned, cancelInsurance, chooseInsurance, clearLoan, currentInsurance, dateInputValue, daysUntil, forecastCash, getCreditProfile, getInsights, loanStage, loanStages, logActivity, openPlanned, payableTotal, removePlanned, rp, settlePlanned, shortDate, submitLoan, useActivity, useLedger, useLoanApplication, usePlanned, useProfile, type Insight, type InsuranceChoice, type LoanApplication, type Planned } from "@/lib/financials";
 import { healthyCap, rankLenders, type LenderMatch } from "@/lib/scoring";
 
 function Header({ eyebrow, title, onBack }: { eyebrow: string; title: string; onBack: () => void }) {
@@ -197,25 +197,32 @@ function LoanStatus({ application, onBack }: { application: LoanApplication; onB
   );
 }
 
-/* ---------- Insurance matching ---------- */
+/* ---------- Insurance matching (simulated: no policy is issued) ---------- */
 const risks = [
   { key: "fire", label: "Kebakaran & bencana", icon: <Flame size={16} /> },
   { key: "theft", label: "Pencurian", icon: <Lock size={16} /> },
   { key: "biz", label: "Gangguan usaha", icon: <Store size={16} /> },
   { key: "health", label: "Kesehatan karyawan", icon: <HeartPulse size={16} /> },
 ];
+const riskLabel = (key: string) => risks.find((r) => r.key === key)?.label ?? key;
 const plans = [
   { name: "Proteksi Toko Dasar", covers: ["fire"], rate: 0.0012, note: "Peralatan dan bangunan toko" },
   { name: "Proteksi Toko Plus", covers: ["fire", "theft"], rate: 0.002, note: "Termasuk kehilangan stok & uang kas" },
   { name: "Usaha Aman Lengkap", covers: ["fire", "theft", "biz"], rate: 0.003, note: "Ganti rugi pendapatan saat toko tutup paksa" },
   { name: "Sehat Karyawan Mikro", covers: ["health"], rate: 0, fixed: 45000, note: "Rawat jalan & inap untuk 1–5 karyawan" },
 ];
+type PlanDraft = Omit<InsuranceChoice, "at"> & { uncovered: string[] };
 
 export function InsuranceView({ onBack }: { onBack: () => void }) {
   const [picked, setPicked] = useState<string[]>(["fire", "theft"]);
   const [assetValue, setAssetValue] = useState(10000000);
+  const [draft, setDraft] = useState<PlanDraft | null>(null);
   const profit = getCreditProfile(useLedger()).monthlyProfit;
+  const chosen = currentInsurance(useActivity());
   const toggle = (k: string) => setPicked((p) => (p.includes(k) ? p.filter((x) => x !== k) : [...p, k]));
+
+  if (chosen) return <InsuranceStatus choice={chosen} profit={profit} onBack={onBack} />;
+  if (draft) return <InsuranceConfirm draft={draft} profit={profit} onBack={() => setDraft(null)} />;
 
   const results = plans
     .map((p) => {
@@ -232,7 +239,12 @@ export function InsuranceView({ onBack }: { onBack: () => void }) {
     <main className="min-h-screen pb-28">
       <Header eyebrow="ASURANSI TOKO" title="Lindungi usahamu" onBack={onBack} />
       <div className="px-5">
-        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Satu musibah bisa menghabiskan modal yang dikumpulkan bertahun-tahun. Pilih risiko yang kamu khawatirkan, lalu bandingkan premi dengan labamu.</p>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">Satu musibah bisa menghabiskan modal yang dikumpulkan bertahun-tahun. Dengan premi kecil tiap bulan, kerugian besar ditanggung perusahaan asuransi.</p>
+        <ol className="mt-3 space-y-1.5 rounded-2xl bg-muted p-4 text-xs leading-relaxed text-muted-foreground">
+          <li><strong className="text-foreground">1.</strong> Pilih risiko yang kamu khawatirkan dan nilai aset tokomu.</li>
+          <li><strong className="text-foreground">2.</strong> FinTar mencocokkan paket dan membandingkan preminya dengan labamu.</li>
+          <li><strong className="text-foreground">3.</strong> Pilih paket, lalu FinTar meneruskan data usahamu ke penyedia (simulasi).</li>
+        </ol>
         <Label>Risiko yang ingin dilindungi</Label>
         <div className="grid grid-cols-2 gap-2">
           {risks.map((r) => {
@@ -253,15 +265,95 @@ export function InsuranceView({ onBack }: { onBack: () => void }) {
                 <div className="flex items-center gap-3"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-primary"><ShieldCheck size={18} /></div><div><p className="text-sm font-bold">{p.name}</p><p className="text-[10px] text-muted-foreground">{p.note}</p></div></div>
                 <span className="shrink-0 rounded-lg bg-primary px-2 py-1 text-[10px] font-bold text-primary-foreground">{p.score}% cocok</span>
               </div>
-              <div className="mt-3 flex flex-wrap gap-1.5">{p.covers.map((c) => <span key={c} className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold">{risks.find((r) => r.key === c)?.label}</span>)}</div>
+              <div className="mt-3 flex flex-wrap gap-1.5">{p.covers.map((c) => <span key={c} className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold">{riskLabel(c)}</span>)}</div>
               <p className="mt-2 text-[11px] text-muted-foreground">Menutup {p.hit} dari {picked.length} risiko yang kamu pilih.</p>
-              <div className="mt-3 flex items-end justify-between">
+              <div className="mt-3 flex items-end justify-between gap-3">
                 <div><p className="text-[10px] text-muted-foreground">Premi per bulan</p><p className="text-base font-extrabold">{rp(p.premium)}</p>{profit > 0 && <p className="text-[10px] text-success">{((p.premium / profit) * 100).toFixed(1)}% dari laba bulanan</p>}</div>
-                {i === 0 && <Button className="h-10 px-4 text-xs" onClick={() => toast.success(`Simulasi: minat pada ${p.name} tercatat. Belum ada polis yang dibeli.`)}>Pilih paket</Button>}
+                <Button variant={i === 0 ? "default" : "secondary"} className="h-10 shrink-0 px-4 text-xs" onClick={() => setDraft({ name: p.name, premium: p.premium, covers: p.covers, assetValue, uncovered: picked.filter((c) => !p.covers.includes(c)) })}>Pilih paket</Button>
               </div>
             </div>
           ))}
         </div>
+      </div>
+    </main>
+  );
+}
+
+function InsuranceConfirm({ draft, profit, onBack }: { draft: PlanDraft; profit: number; onBack: () => void }) {
+  const profile = useProfile();
+  const [agree, setAgree] = useState(false);
+  const { uncovered, ...choice } = draft;
+  return (
+    <main className="min-h-screen pb-28">
+      <Header eyebrow="KONFIRMASI PAKET" title={draft.name} onBack={onBack} />
+      <div className="px-5">
+        <section className="mt-3 rounded-3xl border border-primary p-5">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-extrabold"><span className="grid size-7 place-items-center rounded-lg bg-muted text-primary"><ShieldCheck size={15} /></span>Ringkasan perlindungan</h2>
+          <Fact label="Usaha" value={profile.name} />
+          <Fact label="Nilai aset yang dilindungi" value={rp(draft.assetValue)} />
+          <Fact label="Premi per bulan" value={rp(draft.premium)} />
+          <Fact label="Porsi dari laba bulanan" value={profit > 0 ? `${((draft.premium / profit) * 100).toFixed(1)}%` : "-"} />
+        </section>
+
+        <section className="mt-3 rounded-3xl border border-border p-5">
+          <h2 className="mb-2 text-sm font-extrabold">Yang ditanggung</h2>
+          <ul className="space-y-1.5">{draft.covers.map((c) => <li key={c} className="flex items-center gap-2 text-xs"><CheckCircle2 size={14} className="shrink-0 text-success" /> {riskLabel(c)}</li>)}</ul>
+          {uncovered.length > 0 && (
+            <>
+              <h2 className="mb-2 mt-4 text-sm font-extrabold">Belum ditanggung paket ini</h2>
+              <ul className="space-y-1.5">{uncovered.map((c) => <li key={c} className="flex items-center gap-2 text-xs text-muted-foreground"><AlertTriangle size={14} className="shrink-0 text-danger" /> {riskLabel(c)}</li>)}</ul>
+            </>
+          )}
+        </section>
+
+        <label className="mt-4 flex items-start gap-3 text-xs leading-relaxed">
+          <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]" />
+          <span>Saya setuju profil usaha dan nilai aset di atas diteruskan ke penyedia asuransi untuk menyiapkan penawaran.</span>
+        </label>
+        <Button className="mt-4 h-12 w-full" disabled={!agree} onClick={() => chooseInsurance(choice)}>Ajukan paket ini</Button>
+        <SimNote>Simulasi: FinTar belum terhubung ke perusahaan asuransi. Tidak ada polis yang terbit dan tidak ada premi yang ditagih.</SimNote>
+      </div>
+    </main>
+  );
+}
+
+function InsuranceStatus({ choice, profit, onBack }: { choice: InsuranceChoice; profit: number; onBack: () => void }) {
+  const planned = usePlanned();
+  const premiumLabel = `Premi ${choice.name}`;
+  const scheduled = openPlanned(planned).some((p) => p.label === premiumLabel);
+  const steps = [
+    { title: "Pengajuan diterima", text: "Data usaha dan pilihan paketmu diteruskan ke penyedia.", done: true },
+    { title: "Penyedia menghubungimu", text: "Mereka memastikan nilai aset dan menjelaskan syarat polis.", done: false },
+    { title: "Polis terbit setelah premi pertama", text: "Perlindungan mulai berlaku sejak polis diterbitkan.", done: false },
+  ];
+  return (
+    <main className="min-h-screen pb-28">
+      <Header eyebrow="ASURANSI TOKO" title="Paket yang kamu ajukan" onBack={onBack} />
+      <div className="px-5">
+        <div className="mt-3 rounded-3xl bg-primary p-5 text-primary-foreground">
+          <p className="text-xs opacity-75">Diajukan {new Date(choice.at).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>
+          <p className="mt-1 text-xl font-bold">{choice.name}</p>
+          <p className="mt-1 text-[11px] opacity-75">{rp(choice.premium)}/bulan{profit > 0 ? ` • ${((choice.premium / profit) * 100).toFixed(1)}% dari laba` : ""} • aset {rp(choice.assetValue)}</p>
+          <div className="mt-3 flex flex-wrap gap-1.5">{choice.covers.map((c) => <span key={c} className="rounded-md bg-primary-foreground/15 px-2 py-0.5 text-[10px] font-semibold">{riskLabel(c)}</span>)}</div>
+        </div>
+
+        <ol className="mt-6 space-y-5">
+          {steps.map((s, i) => (
+            <li key={s.title} className={`flex gap-3 ${s.done ? "" : "opacity-50"}`}>
+              <span className={`grid size-8 shrink-0 place-items-center rounded-full ${s.done ? "bg-success-soft text-success" : "bg-muted text-primary"}`}>{s.done ? <CheckCircle2 size={16} /> : <span className="text-xs font-bold">{i + 1}</span>}</span>
+              <div><p className="text-sm font-bold">{s.title}</p><p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">{s.text}</p></div>
+            </li>
+          ))}
+        </ol>
+
+        <SimNote>Simulasi: langkah 2 dan 3 menggambarkan proses di produk sungguhan. Saat ini belum ada penyedia yang terhubung, jadi usahamu belum terlindungi.</SimNote>
+
+        <div className="mt-4 rounded-2xl border border-border p-4">
+          <p className="text-xs font-bold">Masukkan premi ke proyeksi kas</p>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{scheduled ? "Premi bulan depan sudah ada di daftar kewajiban, jadi proyeksi kas 30 hari sudah memperhitungkannya." : "Supaya proyeksi kas 30 hari ikut memperhitungkan premi bulan depan."}</p>
+          {!scheduled && <Button variant="secondary" className="mt-3 h-10 w-full text-xs" onClick={() => addPlanned({ kind: "expense", label: premiumLabel, amount: choice.premium, due: dateInputValue(new Date(Date.now() + 30 * 86400000)) })}><CalendarClock size={14} /> Jadwalkan premi {rp(choice.premium)}</Button>}
+        </div>
+        <Button variant="secondary" className="mt-3 h-11 w-full text-xs" onClick={cancelInsurance}>Batalkan dan pilih paket lain</Button>
       </div>
     </main>
   );

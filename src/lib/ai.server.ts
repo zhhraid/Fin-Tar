@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 // One place for every AI call. Keys stay on the server.
 //   AI_PROVIDER=claude|gemini  optional; otherwise the first key found is used
 //   ANTHROPIC_API_KEY, ANTHROPIC_MODEL (default claude-opus-5-5)
-//   GEMINI_API_KEY, GEMINI_MODEL (default gemini-flash-latest)
+//   GEMINI_API_KEY, GEMINI_MODEL (default gemini-flash-lite-latest), GEMINI_FALLBACK_MODEL
 // With no key the app runs in demo mode (see finix-local.ts and scan.server.ts).
 
 export type AiProvider = "claude" | "gemini" | "demo";
@@ -88,25 +88,56 @@ async function claudeJson(prompt: string, image: { mime: string; data: string },
 }
 
 /* ---------- Gemini (REST) ---------- */
-const geminiModel = () => env("GEMINI_MODEL") ?? "gemini-flash-latest";
+// The lite model is the default because the free tier allows far more requests per day
+// for it than for the full flash model (20 per day when this was written), and it answers faster.
+const geminiModel = () => env("GEMINI_MODEL") ?? "gemini-flash-lite-latest";
+// Gemini regularly answers 503 "high demand", more so on the free tier. Each model is
+// retried after a short wait, then the fallback model takes over; it has its own quota.
+const geminiModels = () => [...new Set([geminiModel(), env("GEMINI_FALLBACK_MODEL") ?? "gemini-flash-latest"])];
+const RETRY_WAITS_MS = [700, 1800];
+const HEADERS_TIMEOUT_MS = 45000; // per attempt, until the model starts answering (covers a slow image upload)
 
 async function geminiFetch(method: string, body: unknown, signal: AbortSignal): Promise<Response> {
-  let res: Response;
-  try {
-    res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${geminiModel()}:${method}`, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-goog-api-key": env("GEMINI_API_KEY") ?? "" },
-      body: JSON.stringify(body),
-      signal,
-    });
-  } catch {
-    throw new AiError("Tidak bisa menghubungi AI. Periksa koneksi server.", 502);
+  let last = new AiError("AI sedang sangat ramai. Coba lagi sebentar.", 503);
+  for (const model of geminiModels()) {
+    for (let attempt = 0; attempt <= RETRY_WAITS_MS.length; attempt++) {
+      if (attempt) await new Promise((r) => setTimeout(r, RETRY_WAITS_MS[attempt - 1]));
+      let res: Response;
+      // Aborts when the caller goes away, or when this attempt gets no answer in time.
+      const attemptAbort = new AbortController();
+      signal.addEventListener("abort", () => attemptAbort.abort(), { once: true });
+      const timer = setTimeout(() => attemptAbort.abort(), HEADERS_TIMEOUT_MS);
+      try {
+        res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:${method}`, {
+          method: "POST",
+          headers: { "content-type": "application/json", "x-goog-api-key": env("GEMINI_API_KEY") ?? "" },
+          body: JSON.stringify(body),
+          signal: attemptAbort.signal,
+        });
+      } catch {
+        if (signal.aborted) throw new AiError("Permintaan dibatalkan.", 499);
+        console.error(`[ai] Gemini ${model}: ${attemptAbort.signal.aborted ? "tidak menjawab dalam batas waktu" : "koneksi gagal"}`);
+        last = new AiError("Tidak bisa menghubungi AI. Periksa koneksi lalu coba lagi.", 502);
+        continue;
+      } finally {
+        clearTimeout(timer);
+      }
+      if (res.ok) return res;
+      const detail = (await res.text()).replace(/\s+/g, " ").slice(0, 300);
+      console.error(`[ai] Gemini ${model} menjawab ${res.status}: ${detail}`);
+      if (res.status === 500 || res.status === 503) continue; // temporary: retry this model
+      if (res.status === 429) {
+        last = new AiError("Kuota AI habis untuk saat ini. Coba lagi beberapa menit lagi.", 429);
+        break; // this model's quota is used up: try the fallback model
+      }
+      if (res.status === 404) throw new AiError(`Model Gemini "${model}" tidak ditemukan. Periksa GEMINI_MODEL.`, 500);
+      if (res.status === 401 || res.status === 403) throw new AiError("Kunci API Gemini tidak valid. Periksa GEMINI_API_KEY.", 500);
+      // 400 covers both a malformed key and input the model cannot process (e.g. a broken image).
+      if (res.status === 400) throw new AiError(/API key/i.test(detail) ? "Kunci API Gemini tidak valid. Periksa GEMINI_API_KEY." : "AI tidak bisa memproses kiriman ini. Coba foto ulang atau ubah pertanyaannya.", /API key/i.test(detail) ? 500 : 422);
+      throw new AiError("AI gagal menjawab. Coba lagi.", 502);
+    }
   }
-  if (res.ok) return res;
-  if (res.status === 429) throw new AiError("Kuota AI habis atau sedang ramai. Coba lagi sebentar.", 429);
-  if (res.status === 404) throw new AiError(`Model Gemini "${geminiModel()}" tidak ditemukan. Periksa GEMINI_MODEL.`, 500);
-  if (res.status === 400 || res.status === 401 || res.status === 403) throw new AiError("Kunci API Gemini tidak valid atau permintaan ditolak. Periksa GEMINI_API_KEY.", 500);
-  throw new AiError("AI gagal menjawab. Coba lagi.", 502);
+  throw last;
 }
 
 type GeminiChunk = { candidates?: { content?: { parts?: { text?: string; thought?: boolean }[] } }[] };

@@ -329,6 +329,23 @@ export const loanStages = ["Proposal terkirim", "Laporan keuangan diverifikasi",
 /** Index of the stage reached; the simulation advances on a timer after submitting. */
 export const loanStage = (a: LoanApplication, now = Date.now()) => (now - a.submittedAt < 8000 ? 0 : now - a.submittedAt < 20000 ? 1 : 2);
 
+/* ---------- Insurance choice (simulated: no policy is issued) ---------- */
+// The choice is not a table of its own: it is read back from the activity log, where
+// choosing and cancelling are recorded like every other approved action.
+export type InsuranceChoice = { name: string; premium: number; covers: string[]; assetValue: number; at: string };
+export function currentInsurance(log: Activity[]): InsuranceChoice | null {
+  const last = log.find((a) => a.tool === "select_insurance" || a.tool === "cancel_insurance");
+  const d = last?.tool === "select_insurance" ? last.detail : undefined;
+  if (!last || !d || typeof d["name"] !== "string" || !(Number(d["premium"]) > 0)) return null;
+  return { name: d["name"], premium: Number(d["premium"]), covers: Array.isArray(d["covers"]) ? d["covers"].map(String) : [], assetValue: Number(d["assetValue"]) || 0, at: last.at };
+}
+export function chooseInsurance(c: Omit<InsuranceChoice, "at">) {
+  logActivity({ tool: "select_insurance", tier: "T2", status: "approved", summary: `Paket asuransi ${c.name} diajukan, premi ${rp(c.premium)}/bulan (simulasi)`, detail: { ...c } });
+}
+export function cancelInsurance() {
+  logActivity({ tool: "cancel_insurance", tier: "T2", status: "approved", summary: "Pengajuan paket asuransi dibatalkan" });
+}
+
 /* ---------- Bulk store access for cloud sync ---------- */
 export type StoreSnapshot = { ledger: Tx[]; profile: Profile; planned: Planned[]; consent: boolean; activity: Activity[]; loan: LoanApplication | null };
 /** Fills every store from the signed-in account without writing anything back. */
