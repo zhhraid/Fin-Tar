@@ -1,0 +1,8 @@
+# Deploy ke Netlify. Nitro mengenali Netlify saat build dan menaruh berkas statis di
+# "dist" serta server (halaman awal, Finix, pemindai struk) sebagai fungsi serverless.
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"

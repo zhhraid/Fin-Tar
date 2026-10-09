@@ -31,3 +31,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Hasil build untuk Vercel
+.vercel
+.netlify
