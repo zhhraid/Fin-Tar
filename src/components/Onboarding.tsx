@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { LanguageSwitch } from "@/components/fields";
 import { useTranslation } from "@/lib/i18n";
 
 type Step = { icon: typeof BarChart3; title: string; description: string };
@@ -52,14 +53,17 @@ export function Onboarding({
           <div className="flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-[0.16em] text-primary">
             <Sparkles size={13} /> {t("onboardingEyebrow")}
           </div>
-          <button
-            type="button"
-            className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-            onClick={onComplete}
-            aria-label={t("skipOnboardingBtn")}
-          >
-            <X size={17} />
-          </button>
+          <div className="flex items-center gap-2">
+            <LanguageSwitch />
+            <button
+              type="button"
+              className="grid size-8 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+              onClick={onComplete}
+              aria-label={t("skipOnboardingBtn")}
+            >
+              <X size={17} />
+            </button>
+          </div>
         </div>
         <div className="px-5 pb-5 pt-6">
           <div className="grid size-14 place-items-center rounded-2xl bg-primary/10 text-primary">
