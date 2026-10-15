@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { dateInputValue } from "@/lib/financials";
+import { setLanguage, useLanguage, type Language } from "@/lib/i18n";
 
 export const Label = ({ children }: { children: ReactNode }) => <p className="mb-2 mt-5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">{children}</p>;
 
@@ -24,4 +25,22 @@ export function MoneyInput({ value, onChange, large = false, autoFocus = false, 
 
 export function DateInput({ value, onChange, allowFuture = false }: { value: string; onChange: (v: string) => void; allowFuture?: boolean }) {
   return <input aria-label="Tanggal" type="date" value={value} {...(allowFuture ? {} : { max: dateInputValue() })} onChange={(e) => onChange(e.target.value)} className="h-11 w-full rounded-2xl border border-border bg-transparent px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />;
+}
+
+/** Compact ID/EN toggle for screens shown before Profil is reachable (sign-up, onboarding). */
+export function LanguageSwitch() {
+  const lang = useLanguage();
+  const options: { key: Language; label: string; name: string }[] = [
+    { key: "id", label: "ID", name: "Bahasa Indonesia" },
+    { key: "en", label: "EN", name: "English" },
+  ];
+  return (
+    <div role="group" aria-label="Bahasa / Language" className="inline-flex rounded-full border border-border/70 bg-muted/70 p-0.5">
+      {options.map((o) => (
+        <button key={o.key} type="button" aria-label={o.name} aria-pressed={lang === o.key} onClick={() => setLanguage(o.key)} className={`rounded-full px-2.5 py-1 text-[10px] font-extrabold transition-colors ${lang === o.key ? "bg-card text-primary shadow-xs" : "text-muted-foreground hover:text-foreground"}`}>
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
 }

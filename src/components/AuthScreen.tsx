@@ -1,7 +1,7 @@
 import { Loader2, MailCheck, Sparkles, TrendingUp } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/fields";
+import { Label, LanguageSwitch } from "@/components/fields";
 import { signIn, signUp } from "@/lib/cloud";
 import { useTranslation } from "@/lib/i18n";
 
@@ -51,6 +51,9 @@ export function AuthScreen() {
     <main className="h-full w-full overflow-y-auto app-scroll px-5 py-6 sm:px-6">
       <div className="flex min-h-full w-full items-center justify-center">
         <div className="my-auto flex w-full max-w-sm flex-col py-2">
+        <div className="mb-2 flex justify-end">
+          <LanguageSwitch />
+        </div>
         {/* Brand Header */}
         <div className="text-center mb-5">
           <div className="inline-flex items-center justify-center p-3 rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-primary/5 border border-primary/20 shadow-sm mb-2.5">
