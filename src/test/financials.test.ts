@@ -32,6 +32,18 @@ describe("laporan keuangan", () => {
     expect(shown).toBe(cashBalance(ledger, profile));
   });
 
+  it("memakai rentang tanggal pilihan dan menghitung kas per tanggal akhirnya", () => {
+    const profile = { ...defaultProfile, openingCash: 100000 };
+    const range = { from: dateInputValue(new Date(Date.now() - 40 * DAY)), to: dateInputValue(new Date(Date.now() - 30 * DAY)) };
+    const { txs, totals, cash: shown, balanceSheet } = getStatements(ledger, range, profile);
+    const sum = (rows: { value: number }[]) => rows.reduce((s, r) => s + r.value, 0);
+
+    expect(txs).toHaveLength(3);
+    expect(totals.net).toBe(1300000);
+    expect(shown).toBe(100000 + 1300000);
+    expect(sum(balanceSheet.assets)).toBe(sum(balanceSheet.liabilities) + sum(balanceSheet.equity));
+  });
+
   it("membuang transaksi yang rusak saat memuat data", () => {
     const parsed = parseLedger([ledger[0], { amount: -5, type: "income", date: daysAgo(1) }, { amount: 10, type: "lain", date: daysAgo(1) }, "x"]);
 

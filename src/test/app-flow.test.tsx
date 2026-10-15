@@ -50,6 +50,30 @@ describe("alur utama FinTar", () => {
     expect(screen.getByText("Borongan kue arisan")).toBeInTheDocument();
   });
 
+  it("menampilkan laporan untuk rentang tanggal pilihan", () => {
+    render(<App />);
+    press("Laporan");
+    press("Impor");
+    fireEvent.change(screen.getByLabelText("Isi CSV"), { target: { value: ["tanggal;jenis;jumlah;kategori;keterangan", "15/03/2023;pemasukan;700.000;Penjualan;Pesanan lama 2023", `${today};pemasukan;900.000;Penjualan;Pesanan hari ini`].join("\n") } });
+    press("Impor 2 transaksi");
+
+    press(/Pilih rentang tanggal/);
+    fireEvent.change(screen.getByLabelText("Dari tanggal"), { target: { value: "2023-03-01" } });
+    fireEvent.change(screen.getByLabelText("Sampai tanggal"), { target: { value: "2023-02-01" } });
+    expect(screen.getByText("Tanggal awal tidak boleh setelah tanggal akhir.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Tampilkan laporan" })).toBeDisabled();
+    fireEvent.change(screen.getByLabelText("Sampai tanggal"), { target: { value: "2023-03-31" } });
+    press("Tampilkan laporan");
+
+    expect(screen.getByText("Pesanan lama 2023")).toBeInTheDocument();
+    expect(screen.queryByText("Pesanan hari ini")).not.toBeInTheDocument();
+    expect(screen.getByText(/1 Mar 2023 – 31 Mar 2023 • 1 transaksi/)).toBeInTheDocument();
+
+    press("Kembali ke Bulan ini");
+    expect(screen.getByText("Pesanan hari ini")).toBeInTheDocument();
+    expect(screen.queryByText("Pesanan lama 2023")).not.toBeInTheDocument();
+  });
+
   it("meminta izin AI sebelum Finix, lalu meneruskan pertanyaan dari laporan", () => {
     render(<App />);
     press("Laporan");

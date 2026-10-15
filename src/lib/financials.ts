@@ -371,9 +371,16 @@ export function clearStores() {
 
 /* ---------- Periods & statements ---------- */
 export type PeriodKey = "week" | "month" | "quarter" | "year";
+/** A preset, or a range of calendar days the owner picked (YYYY-MM-DD, both ends included). */
+export type Period = PeriodKey | { from: string; to: string };
 const fmt = (d: Date) => d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 
-export function periodRange(key: PeriodKey, now = new Date()) {
+export function periodRange(key: Period, now = new Date()) {
+  if (typeof key !== "string") {
+    const start = new Date(`${key.from}T00:00:00`);
+    const end = new Date(`${key.to}T23:59:59.999`);
+    return { start, end, label: `${fmt(start)} – ${fmt(end)}` };
+  }
   const end = new Date(now);
   end.setHours(23, 59, 59, 999);
   const start = new Date(now);
@@ -391,7 +398,7 @@ export const periods: { key: PeriodKey; label: string }[] = [
   { key: "year", label: "Tahun ini" },
 ];
 
-export function filterPeriod(txs: Tx[], key: PeriodKey) {
+export function filterPeriod(txs: Tx[], key: Period) {
   const { start, end } = periodRange(key);
   return txs.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; });
 }
@@ -422,10 +429,12 @@ export function summarize(txs: Tx[]) {
 
 export const cashBalance = (all: Tx[], p: Profile) => p.openingCash + summarize(all).net;
 
-export function getStatements(all: Tx[], key: PeriodKey, p: Profile = defaultProfile, items: Planned[] = []) {
+export function getStatements(all: Tx[], key: Period, p: Profile = defaultProfile, items: Planned[] = []) {
   const txs = filterPeriod(all, key);
   const totals = summarize(txs);
-  const allNet = summarize(all).net;
+  // A picked range can end in the past; the cash and balance sheet are then as of its last day.
+  const end = periodRange(key).end;
+  const allNet = summarize(typeof key === "string" ? all : all.filter((t) => new Date(t.date) <= end)).net;
   const cash = p.openingCash + allNet;
   const payable = payableTotal(items);
   const expense = txs.filter((t) => t.type === "expense");

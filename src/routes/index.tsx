@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import {
   Bell,
   Bot,
+  CalendarDays,
   Camera,
   CheckCircle2,
   ChevronRight,
@@ -39,7 +40,7 @@ import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
 import { signOut, startCloud, useAuth } from "@/lib/cloud";
 import { csvTemplate, parseCsv, suggestCategory, type CsvResult } from "@/lib/csv";
 import { exportReportPdf, exportTransactionsCsv } from "@/lib/export";
-import { addTransaction, addTransactions, dateInputToIso, dateInputValue, expenseCategories, getInsights, getStatements, incomeCategories, logActivity, periodRange, periods, removeTransaction, resetLedger, rollingDays, rp, setAiConsent, summarize, updateProfile, updateTransaction, useAiConsent, useLedger, usePlanned, useProfile, type Category, type PeriodKey, type Tx } from "@/lib/financials";
+import { addTransaction, addTransactions, dateInputToIso, dateInputValue, expenseCategories, getInsights, getStatements, incomeCategories, logActivity, periodRange, periods, removeTransaction, resetLedger, rollingDays, rp, setAiConsent, summarize, updateProfile, updateTransaction, useAiConsent, useLedger, usePlanned, useProfile, type Category, type Period, type PeriodKey, type Tx } from "@/lib/financials";
 import { setLanguage, useLanguage, useTranslation } from "@/lib/i18n";
 import { useInstallPrompt } from "@/lib/pwa";
 import { AlertCard, AlertsView, InsuranceView, LoanView } from "@/components/CopilotViews";
@@ -60,7 +61,7 @@ export const Route = createFileRoute("/")({
 });
 
 type View = "home" | "reports" | "scan" | "finix" | "profile" | "loan" | "insurance" | "alerts" | "activity";
-type Sheet = { kind: "add"; type: Tx["type"] } | { kind: "edit"; tx: Tx } | { kind: "csv" } | null;
+type Sheet = { kind: "add"; type: Tx["type"] } | { kind: "edit"; tx: Tx } | { kind: "csv" } | { kind: "range" } | null;
 
 const Frame = ({ children }: { children: ReactNode }) => (
   <div className="fixed inset-0 h-[100dvh] w-full overflow-hidden bg-muted/50 flex items-center justify-center sm:p-4 md:p-6">
@@ -71,6 +72,8 @@ const Frame = ({ children }: { children: ReactNode }) => (
 function Index() {
   const [view, setView] = useState<View>("home");
   const [sheet, setSheet] = useState<Sheet>(null);
+  // Kept here so the chosen report period survives switching tabs.
+  const [period, setPeriod] = useState<Period>("month");
   const [finixPrompt, setFinixPrompt] = useState<string | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const auth = useAuth();
@@ -119,7 +122,7 @@ function Index() {
     <Frame>
       <div className="relative flex-1 app-scroll">
         {view === "home" && <HomeView onNavigate={navigate} onAdd={add} onEdit={(tx) => setSheet({ kind: "edit", tx })} />}
-        {view === "reports" && <ReportsView onAsk={askFinix} onEdit={(tx) => setSheet({ kind: "edit", tx })} onImport={() => setSheet({ kind: "csv" })} />}
+        {view === "reports" && <ReportsView period={period} onPeriod={setPeriod} onPickRange={() => setSheet({ kind: "range" })} onAsk={askFinix} onEdit={(tx) => setSheet({ kind: "edit", tx })} onImport={() => setSheet({ kind: "csv" })} />}
         {view === "finix" && <FinixGate><FinixChat prompt={finixPrompt} onPromptUsed={() => setFinixPrompt(null)} /></FinixGate>}
         {view === "profile" && <ProfileView onActivity={() => navigate("activity")} />}
         {view === "loan" && <LoanView onBack={() => navigate("home")} />}
@@ -132,6 +135,7 @@ function Index() {
       {sheet?.kind === "add" && <EntrySheet type={sheet.type} onClose={() => setSheet(null)} />}
       {sheet?.kind === "edit" && <EntrySheet type={sheet.tx.type} tx={sheet.tx} onClose={() => setSheet(null)} />}
       {sheet?.kind === "csv" && <CsvSheet onClose={() => setSheet(null)} />}
+      {sheet?.kind === "range" && <RangeSheet value={period} onApply={setPeriod} onClose={() => setSheet(null)} />}
       {showOnboarding && <Onboarding onComplete={completeOnboarding} onOpenProfile={openProfileFromOnboarding} />}
     </Frame>
   );
@@ -332,8 +336,7 @@ function TransactionList({ items, onSelect }: { items: Tx[]; onSelect: (tx: Tx) 
   );
 }
 
-function ReportsView({ onAsk, onEdit, onImport }: { onAsk: (prompt: string) => void; onEdit: (tx: Tx) => void; onImport: () => void }) {
-  const [period, setPeriod] = useState<PeriodKey>("month");
+function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }: { period: Period; onPeriod: (p: Period) => void; onPickRange: () => void; onAsk: (prompt: string) => void; onEdit: (tx: Tx) => void; onImport: () => void }) {
   const [exporting, setExporting] = useState(false);
   const ledger = useLedger();
   const profile = useProfile();
@@ -341,7 +344,7 @@ function ReportsView({ onAsk, onEdit, onImport }: { onAsk: (prompt: string) => v
   const { t, lang } = useTranslation();
   const { txs, incomeStatement, totals, cashFlow, balanceSheet, cash } = getStatements(ledger, period, profile, planned);
   const range = periodRange(period);
-  const periodLabel = periods.find((p) => p.key === period)!.label.toLowerCase();
+  const custom = typeof period !== "string";
   const pct = (n: number) => (totals.revenue ? `${((n / totals.revenue) * 100).toFixed(1)}%` : "0%");
   const totalAssets = balanceSheet.assets.reduce((s, i) => s + i.value, 0);
   const totalLiab = balanceSheet.liabilities.reduce((s, i) => s + i.value, 0);
@@ -349,11 +352,12 @@ function ReportsView({ onAsk, onEdit, onImport }: { onAsk: (prompt: string) => v
   const netCash = cashFlow.reduce((s, i) => s + i.value, 0);
   
   const periodButtonLabels: Record<PeriodKey, string> = {
-    "7d": t("period7d"),
+    week: t("period7d"),
     month: t("periodMonth"),
-    "3m": t("period3m"),
+    quarter: t("period3m"),
     year: t("periodYear"),
   };
+  const periodName = custom ? range.label : periodButtonLabels[period].toLowerCase();
 
   const incomeNote = !totals.revenue
     ? (lang === "en" ? "No income recorded in this period." : "Belum ada pemasukan di periode ini.")
@@ -380,7 +384,15 @@ function ReportsView({ onAsk, onEdit, onImport }: { onAsk: (prompt: string) => v
       <p className="text-xs font-bold text-primary">{t("financialReportsEyebrow")}</p>
       <h1 className="mt-1 text-2xl font-extrabold">{profile.name}</h1>
       <p className="text-xs text-muted-foreground">{t("periodLabel")} {range.label} • {txs.length} {t("transactionsCount")}</p>
-      <div className="mt-4 grid grid-cols-4 gap-1 rounded-2xl bg-muted p-1">{periods.map((p) => <button key={p.key} onClick={() => setPeriod(p.key)} className={`rounded-xl py-2 text-[11px] font-bold transition-colors ${p.key === period ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}>{periodButtonLabels[p.key] || p.label}</button>)}</div>
+      <div className="mt-4 grid grid-cols-4 gap-1 rounded-2xl bg-muted p-1">{periods.map((p) => <button key={p.key} onClick={() => onPeriod(p.key)} className={`rounded-xl py-2 text-[11px] font-bold transition-colors ${p.key === period ? "bg-card text-primary shadow-sm" : "text-muted-foreground"}`}>{periodButtonLabels[p.key] || p.label}</button>)}</div>
+      <div className="mt-2 flex gap-2">
+        <button type="button" onClick={onPickRange} className={`flex h-10 min-w-0 flex-1 items-center gap-2 rounded-2xl border px-3 text-[11px] font-bold transition-colors ${custom ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:text-foreground"}`}>
+          <CalendarDays size={15} className="shrink-0" />
+          <span className="truncate">{custom ? range.label : t("periodCustomBtn")}</span>
+          <ChevronRight size={15} className="ml-auto shrink-0" />
+        </button>
+        {custom && <Button variant="icon" className="size-10 shrink-0 rounded-2xl p-0" onClick={() => onPeriod("month")} aria-label={t("rangeClearAria")}><X size={16} /></Button>}
+      </div>
 
       <div className="mt-5 grid grid-cols-3 gap-2">
         <Kpi label={t("kpiRevenue")} value={lang === "en" ? `${(totals.revenue / 1e6).toFixed(2)} M` : `${(totals.revenue / 1e6).toFixed(2)} jt`} />
@@ -388,7 +400,7 @@ function ReportsView({ onAsk, onEdit, onImport }: { onAsk: (prompt: string) => v
         <Kpi label={t("kpiNetMargin")} value={pct(totals.net)} accent />
       </div>
 
-      <button onClick={() => onAsk(lang === "en" ? `Explain my financial statements for ${periodButtonLabels[period].toLowerCase()} in simple terms, and what should I improve?` : `Jelaskan laporan keuanganku untuk periode ${periodLabel} dengan bahasa sederhana, lalu apa yang perlu kuperbaiki?`)} className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-primary p-3 text-left transition-colors hover:bg-muted">
+      <button onClick={() => onAsk(lang === "en" ? `Explain my financial statements for ${periodName} in simple terms, and what should I improve?` : `Jelaskan laporan keuanganku untuk periode ${periodName} dengan bahasa sederhana, lalu apa yang perlu kuperbaiki?`)} className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-primary p-3 text-left transition-colors hover:bg-muted">
         <img src={finixMark} alt="" width={32} height={32} className="size-8 shrink-0 rounded-lg bg-muted object-contain" />
         <span className="min-w-0 flex-1"><span className="block text-xs font-bold">{t("askFinixAboutReport")}</span><span className="block text-[10px] text-muted-foreground">{t("explainedEverydayLang")}</span></span>
         <ChevronRight size={16} className="shrink-0 text-primary" />
@@ -656,6 +668,35 @@ function EntrySheet({ type, tx, onClose }: { type: Tx["type"]; tx?: Tx; onClose:
       <Label>{t("dateLabel")}</Label><DateInput value={date} onChange={setDate} />
       <Button className="mt-6 h-12 w-full" disabled={!value} onClick={save}>{tx ? t("saveChangesBtn") : t("saveTxBtn")}</Button>
       {tx && <Button variant="ghost" className="mt-2 h-11 w-full text-xs text-danger hover:text-danger" onClick={() => { removeTransaction(tx.id); onClose(); }}><Trash2 size={15} /> {t("deleteTxBtn")}</Button>}
+    </SheetFrame>
+  );
+}
+
+function RangeSheet({ value, onApply, onClose }: { value: Period; onApply: (p: Period) => void; onClose: () => void }) {
+  const { t } = useTranslation();
+  const ledger = useLedger();
+  const [from, setFrom] = useState(() => dateInputValue(periodRange(value).start));
+  const [to, setTo] = useState(() => dateInputValue(periodRange(value).end));
+  const now = new Date();
+  const first = ledger.reduce((min, tx) => (tx.date < min ? tx.date : min), now.toISOString());
+  const quick: { label: string; from: string; to: string }[] = [
+    { label: t("rangeLastMonth"), from: dateInputValue(new Date(now.getFullYear(), now.getMonth() - 1, 1)), to: dateInputValue(new Date(now.getFullYear(), now.getMonth(), 0)) },
+    { label: t("rangeLastYear"), from: `${now.getFullYear() - 1}-01-01`, to: `${now.getFullYear() - 1}-12-31` },
+    { label: t("rangeAllTime"), from: dateInputValue(new Date(first)), to: dateInputValue(now) },
+  ];
+  const picked = quick.find((q) => q.from === from && q.to === to)?.label ?? "";
+  const invalid = Boolean(from && to && from > to);
+  const apply = () => {
+    onApply({ from, to });
+    onClose();
+  };
+  return (
+    <SheetFrame eyebrow={t("rangeSheetEyebrow")} title={t("rangeSheetTitle")} onClose={onClose}>
+      <div className="mt-4"><Chips options={quick.map((q) => q.label)} value={picked} onChange={(label) => { const q = quick.find((x) => x.label === label)!; setFrom(q.from); setTo(q.to); }} /></div>
+      <Label>{t("rangeFromLabel")}</Label><DateInput label={t("rangeFromLabel")} value={from} onChange={setFrom} />
+      <Label>{t("rangeToLabel")}</Label><DateInput label={t("rangeToLabel")} value={to} min={from} onChange={setTo} />
+      {invalid && <p role="alert" className="mt-3 text-xs font-semibold text-danger">{t("rangeInvalid")}</p>}
+      <Button className="mt-6 h-12 w-full" disabled={!from || !to || invalid} onClick={apply}>{t("rangeApplyBtn")}</Button>
     </SheetFrame>
   );
 }

@@ -23,8 +23,8 @@ export function MoneyInput({ value, onChange, large = false, autoFocus = false, 
   );
 }
 
-export function DateInput({ value, onChange, allowFuture = false }: { value: string; onChange: (v: string) => void; allowFuture?: boolean }) {
-  return <input aria-label="Tanggal" type="date" value={value} {...(allowFuture ? {} : { max: dateInputValue() })} onChange={(e) => onChange(e.target.value)} className="h-11 w-full rounded-2xl border border-border bg-transparent px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />;
+export function DateInput({ value, onChange, allowFuture = false, label = "Tanggal", min }: { value: string; onChange: (v: string) => void; allowFuture?: boolean; label?: string; min?: string }) {
+  return <input aria-label={label} type="date" value={value} min={min} {...(allowFuture ? {} : { max: dateInputValue() })} onChange={(e) => onChange(e.target.value)} className="h-11 w-full rounded-2xl border border-border bg-transparent px-4 text-sm outline-none focus:ring-2 focus:ring-ring" />;
 }
 
 /** Compact ID/EN toggle for screens shown before Profil is reachable (sign-up, onboarding). */
