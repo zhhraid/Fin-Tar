@@ -1,4 +1,4 @@
-import { getCreditProfile, getStatements, payableTotal, periodRange, periods, rp, type Activity, type PeriodKey, type Planned, type Profile, type Tx } from "./financials";
+import { getCreditProfile, getStatements, payableTotal, periodRange, rp, type Activity, type Period, type Planned, type Profile, type Tx } from "./financials";
 import { toCsv } from "./csv";
 
 // File exports. The PDF library is loaded only when a download is requested.
@@ -62,7 +62,7 @@ async function buildPdf(heading: string, subtitle: string, tables: Table[], foot
   return doc;
 }
 
-function statementTables(all: Tx[], period: PeriodKey, profile: Profile, planned: Planned[]): Table[] {
+function statementTables(all: Tx[], period: Period, profile: Profile, planned: Planned[]): Table[] {
   const { incomeStatement, totals, cashFlow, balanceSheet, cash } = getStatements(all, period, profile, planned);
   const sum = (rows: { value: number }[]) => rows.reduce((s, r) => s + r.value, 0);
   const pnl: [string, string][] = [
@@ -90,9 +90,9 @@ function statementTables(all: Tx[], period: PeriodKey, profile: Profile, planned
   ];
 }
 
-export async function exportReportPdf(all: Tx[], period: PeriodKey, profile: Profile, planned: Planned[]) {
-  const label = periods.find((p) => p.key === period)!.label;
-  const doc = await buildPdf("Laporan Keuangan", `${profile.name} - ${periodRange(period).label}`, statementTables(all, period, profile, planned), `Dibuat oleh FinTar pada ${today()}. Semua angka dihitung dari transaksi yang dicatat pemilik usaha. Persediaan dan peralatan adalah nilai yang diisi pemilik.`);
+export async function exportReportPdf(all: Tx[], period: Period, profile: Profile, planned: Planned[]) {
+  const { label } = periodRange(period);
+  const doc = await buildPdf("Laporan Keuangan", `${profile.name} - ${label}`, statementTables(all, period, profile, planned), `Dibuat oleh FinTar pada ${today()}. Semua angka dihitung dari transaksi yang dicatat pemilik usaha. Persediaan dan peralatan adalah nilai yang diisi pemilik.`);
   doc.save(`FinTar_Laporan_${slug(profile.name)}_${slug(label)}.pdf`);
 }
 
