@@ -39,7 +39,7 @@ Langkah penyiapan (sekali saja):
 1. Buat proyek di [supabase.com](https://supabase.com/dashboard). Paket gratis cukup.
 2. Buka **SQL Editor > New query**, tempel seluruh isi [supabase/migrations/20261009000000_fintar.sql](supabase/migrations/20261009000000_fintar.sql), lalu klik **Run**. Ini membuat 7 tabel beserta aturan keamanannya. Ulangi untuk [supabase/migrations/20261016000000_audit_chain.sql](supabase/migrations/20261016000000_audit_chain.sql), yang membuat log aktivitas berantai hash. Jalankan berurutan sesuai nama berkasnya.
 3. Buka **Project Settings > API**. Salin **Project URL** ke `VITE_SUPABASE_URL` dan kunci **anon public** ke `VITE_SUPABASE_ANON_KEY` di `.env`. Jangan pakai kunci `service_role`.
-4. Buka **Authentication > Sign In / Providers > Email**: setel **Minimum password length** ke 8 dan **Password requirements** ke huruf dan angka, sama dengan aturan di aplikasi. Di paket Pro, aktifkan juga perlindungan kata sandi bocor (**Leaked password protection**, di bagian Attack Protection).
+4. Buka **Authentication > Sign In / Providers > Email**: setel **Minimum password length** ke 8 dan **Password requirements** ke *Lowercase, uppercase letters, digits and symbols*, sama dengan aturan di aplikasi. Di paket Pro, aktifkan juga perlindungan kata sandi bocor (**Leaked password protection**, di bagian Attack Protection).
 5. Untuk demo, di halaman yang sama matikan **Confirm email** supaya pendaftar langsung masuk. Jika dibiarkan aktif, pendaftar harus membuka tautan di email dulu.
 6. Jalankan ulang `npm run dev`. Layar pertama sekarang adalah halaman masuk.
 

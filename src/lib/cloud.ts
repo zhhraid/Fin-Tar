@@ -171,7 +171,7 @@ export function startCloud(onError: (message: string) => void) {
 const authMessage = (message: string) =>
   /invalid login/i.test(message) ? "Email atau kata sandi salah."
   : /already registered/i.test(message) ? "Email ini sudah terdaftar. Silakan masuk."
-  : /at least \d+|should contain|should be at least/i.test(message) ? "Kata sandi minimal 8 karakter dan memuat huruf serta angka."
+  : /at least \d+|should contain|should be at least/i.test(message) ? "Kata sandi minimal 8 karakter dan memuat huruf kecil, huruf besar, angka, dan simbol."
   : /weak|pwned|leaked|easy to guess/i.test(message) ? "Kata sandi ini pernah bocor di internet. Pakai kata sandi lain."
   : /not confirmed/i.test(message) ? "Email belum dikonfirmasi. Cek kotak masukmu."
   : /rate limit/i.test(message) ? "Terlalu banyak percobaan. Coba lagi beberapa menit lagi."
@@ -183,14 +183,23 @@ export async function signIn(email: string, password: string): Promise<string | 
   return error ? authMessage(error.message) : null;
 }
 
-// Rules for new accounts. Sign-in keeps accepting older, shorter passwords.
-const commonPasswords = new Set(["password1", "password123", "12345678a", "a12345678", "qwerty123", "abc12345", "abcd1234", "1234abcd", "bismillah1", "indonesia1", "rahasia123", "katasandi1", "admin123", "fintar123"]);
-export const passwordChecks = (pw: string) => ({ length: pw.length >= 8, letter: /[a-z]/i.test(pw), digit: /\d/.test(pw), common: !commonPasswords.has(pw.toLowerCase()) });
+// Rules for new accounts, matching Supabase's "lowercase, uppercase letters, digits and symbols"
+// setting (same symbol set) so the checklist and the server agree. Sign-in keeps accepting
+// older passwords made under the earlier rules.
+const commonPasswords = new Set(["password1!", "password123!", "p@ssw0rd", "p@ssw0rd1", "p@ssword1", "qwerty123!", "admin123!", "bismillah1!", "indonesia1!", "rahasia123!", "katasandi1!", "fintar123!", "welcome1!", "abcd1234!"]);
+export const passwordChecks = (pw: string) => ({
+  length: pw.length >= 8,
+  lower: /[a-z]/.test(pw),
+  upper: /[A-Z]/.test(pw),
+  digit: /\d/.test(pw),
+  symbol: /[!@#$%^&*()_+\-=[\]{};'\\:"|<>?,./`~]/.test(pw),
+  common: !commonPasswords.has(pw.toLowerCase()),
+});
 export const strongPassword = (pw: string) => Object.values(passwordChecks(pw)).every(Boolean);
 
 /** Returns "confirm" when Supabase sent a confirmation email instead of signing in. */
 export async function signUp(email: string, password: string, businessName: string): Promise<{ error: string | null; confirm: boolean }> {
-  if (!strongPassword(password)) return { error: "Kata sandi minimal 8 karakter dan memuat huruf serta angka.", confirm: false };
+  if (!strongPassword(password)) return { error: "Kata sandi minimal 8 karakter dan memuat huruf kecil, huruf besar, angka, dan simbol.", confirm: false };
   const { data, error } = await supabase().auth.signUp({ email, password, options: { data: { business_name: businessName.trim().slice(0, 40) } } });
   return { error: error ? authMessage(error.message) : null, confirm: !error && !data.session };
 }
