@@ -111,7 +111,9 @@ describe("alur utama FinTar", () => {
     fireEvent.click(send);
 
     expect(screen.getByText("STATUS PENGAJUAN")).toBeInTheDocument();
-    expect(within(screen.getAllByRole("list")[0]!).getByText("Proposal terkirim")).toBeInTheDocument();
+    expect(within(screen.getAllByRole("list")[0]!).getByText("Proposal terkirim (simulasi)")).toBeInTheDocument();
+    expect(screen.getByText("Simulasi • bukan layanan keuangan sungguhan")).toBeInTheDocument();
+    expect(screen.getByText(/diawasi OJK/)).toBeInTheDocument();
 
     press("Profil");
     fireEvent.click(screen.getByText("Log aktivitas & hapus data"));

@@ -1,6 +1,8 @@
 import { createUIMessageStream, createUIMessageStreamResponse, type UIMessage } from "ai";
 import { AiError, aiProvider, streamChat, type ChatTurn } from "./ai.server";
 import { authorizeAi } from "./auth.server";
+import { guardAiRequest } from "./guard.server";
+import { forbiddenRequest, refusalText } from "./guardrails";
 import { buildFinancialContext, parseLedger, parsePlanned, parseProfile } from "./financials";
 import { localFinixReply } from "./finix-local";
 
@@ -37,26 +39,38 @@ async function* demoChunks(reply: string) {
 
 export const finixMode = () => Response.json({ ai: aiProvider() !== "demo" });
 
+// The ledger is capped at 5000 rows when parsed; this leaves room for that plus the chat.
+const MAX_CHAT_BYTES = 2_000_000;
+
 export async function handleFinixChat(request: Request) {
+  const guarded = await guardAiRequest(request, { endpoint: "chat", maxBytes: MAX_CHAT_BYTES });
+  if (guarded.response) return guarded.response;
   const denied = await authorizeAi(request);
   if (denied) return denied;
 
   let messages: UIMessage[];
   let context: string;
   let demoReply: () => string;
+  let question: string;
+  let lang: "id" | "en";
   try {
-    const body = (await request.json()) as { messages?: unknown; ledger?: unknown; profile?: unknown; planned?: unknown };
+    const body = guarded.body as { messages?: unknown; ledger?: unknown; profile?: unknown; planned?: unknown; lang?: unknown };
     if (!Array.isArray(body.messages) || !body.messages.length) throw new Error("invalid");
     messages = body.messages as UIMessage[];
     const ledger = parseLedger(body.ledger);
     const profile = parseProfile(body.profile);
     const planned = parsePlanned(body.planned);
     context = buildFinancialContext(ledger, profile, planned);
-    const question = text(messages.at(-1)!);
+    question = text(messages.at(-1)!);
+    lang = body.lang === "en" ? "en" : "id";
     demoReply = () => localFinixReply(question, ledger, profile, planned);
   } catch {
     return Response.json({ error: "Permintaan tidak valid." }, { status: 400 });
   }
+
+  // Tier-3 requests get a fixed refusal without reaching the AI; the app logs them as blocked.
+  const forbidden = forbiddenRequest(question);
+  if (forbidden) return respond(messages, demoChunks(refusalText(forbidden, lang)));
 
   if (aiProvider() === "demo") return respond(messages, demoChunks(demoReply()));
 

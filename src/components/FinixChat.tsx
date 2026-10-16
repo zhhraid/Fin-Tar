@@ -10,6 +10,7 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Button } from "@/components/ui/button";
 import { authHeaders } from "@/lib/cloud";
 import { logActivity, rollingDays, rp, summarize, updateProfile, useLedger, usePlanned, useProfile } from "@/lib/financials";
+import { forbiddenRequest } from "@/lib/guardrails";
 import { useTranslation } from "@/lib/i18n";
 import finixMark from "@/assets/finix-mark.png";
 
@@ -33,8 +34,8 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
   const profile = useProfile();
   const planned = usePlanned();
   const { t, lang } = useTranslation();
-  const dataRef = useRef({ ledger, profile, planned });
-  dataRef.current = { ledger, profile, planned };
+  const dataRef = useRef({ ledger, profile, planned, lang });
+  dataRef.current = { ledger, profile, planned, lang };
   const [picking, setPicking] = useState(false);
   const [demo, setDemo] = useState(false);
   const { messages, sendMessage, status, stop, setMessages, error } = useChat({
@@ -55,7 +56,10 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
   }, [messages, status]);
 
   const ask = (text: string) => {
-    logActivity({ tool: "ask_finix", tier: "T0", status: "completed", summary: `Bertanya ke Finix: "${text.slice(0, 80)}"` });
+    // The server answers Tier-3 requests with a fixed refusal; the log records the attempt as blocked.
+    const forbidden = forbiddenRequest(text);
+    if (forbidden) logActivity({ tool: `finix_${forbidden}`, tier: "T3", status: "blocked", summary: `Permintaan terlarang ditolak: "${text.slice(0, 80)}"` });
+    else logActivity({ tool: "ask_finix", tier: "T0", status: "completed", summary: `Bertanya ke Finix: "${text.slice(0, 80)}"` });
     sendMessage({ text });
   };
   const send = (text: string) => {

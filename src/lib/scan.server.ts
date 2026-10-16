@@ -1,5 +1,6 @@
 import { AiError, aiProvider, imageToJson } from "./ai.server";
 import { authorizeAi } from "./auth.server";
+import { guardAiRequest } from "./guard.server";
 import { expenseCategories, type Category } from "./financials";
 
 export type ScanResult = {
@@ -63,12 +64,14 @@ const demoResult = (): ScanResult => ({
 const MAX_IMAGE_CHARS = 6_000_000; // ~4.5 MB of image data
 
 export async function handleScan(request: Request) {
+  const guarded = await guardAiRequest(request, { endpoint: "scan", maxBytes: MAX_IMAGE_CHARS + 10_000 });
+  if (guarded.response) return guarded.response;
   const denied = await authorizeAi(request);
   if (denied) return denied;
 
   let image: string;
   try {
-    const body = (await request.json()) as { image?: unknown };
+    const body = guarded.body as { image?: unknown };
     if (typeof body.image !== "string" || !body.image.startsWith("data:image/")) throw new Error();
     image = body.image;
   } catch {

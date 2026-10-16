@@ -21,6 +21,20 @@ const ledger: Tx[] = [
 ];
 const cash = 2600000; // sum of the ledger above
 
+describe("ekspor CSV", () => {
+  it("menetralkan keterangan yang bisa dijalankan sebagai rumus Excel", () => {
+    const evil = (title: string): Tx => ({ ...ledger[0]!, title });
+    const csv = toCsv([evil('=HYPERLINK("http://x","klik")'), evil("+62 812"), evil("@SUM(A1)"), evil("-5 diskon"), evil("Roti manis")]);
+
+    expect(csv).toContain(`"'=HYPERLINK(""http://x"",""klik"")"`);
+    expect(csv).toContain(";'+62 812");
+    expect(csv).toContain(";'@SUM(A1)");
+    expect(csv).toContain(";'-5 diskon");
+    expect(csv).toContain(";Roti manis");
+    expect(parseCsv(csv).rows.map((r) => r.title)).toEqual(expect.arrayContaining(["+62 812", "-5 diskon", "Roti manis"]));
+  });
+});
+
 describe("laporan keuangan", () => {
   it("menjaga neraca tetap seimbang, termasuk utang yang belum dibayar", () => {
     const profile = { ...defaultProfile, openingCash: 1234000, inventory: 10000, equipment: 999000 };
