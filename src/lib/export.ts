@@ -18,7 +18,8 @@ const slug = (s: string) => s.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "")
 const money = (n: number) => (n < 0 ? `(${rp(-n)})` : rp(n));
 const today = () => new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" });
 
-type Table = { title: string; rows: [string, string][]; bold?: number[] };
+/** Rows are label/value pairs unless `head` names more columns; the last column is right-aligned. */
+type Table = { title: string; rows: string[][]; bold?: number[]; head?: string[] };
 
 async function buildPdf(heading: string, subtitle: string, tables: Table[], footer: string) {
   const [{ jsPDF }, { default: autoTable }] = await Promise.all([import("jspdf"), import("jspdf-autotable")]);
@@ -35,25 +36,33 @@ async function buildPdf(heading: string, subtitle: string, tables: Table[], foot
 
   let y = 36;
   for (const table of tables) {
+    // Start a table on a new page when its title and first rows would not fit (A4 is 297 mm tall).
+    if (y > 240) {
+      doc.addPage();
+      y = 20;
+    }
     doc.setTextColor(15, 23, 42);
     doc.setFont("helvetica", "bold");
     doc.setFontSize(11);
     doc.text(table.title, 14, y);
+    const lastCol = (table.head?.length ?? 2) - 1;
     autoTable(doc, {
       startY: y + 3,
+      ...(table.head ? { head: [table.head], headStyles: { fillColor: [37, 99, 235] as [number, number, number], fontSize: 9 } } : {}),
       body: table.rows,
       theme: "striped",
       styles: { fontSize: 9, cellPadding: 2.5 },
-      columnStyles: { 1: { halign: "right" } },
+      columnStyles: { [lastCol]: { halign: "right" } },
       didParseCell: (data) => {
-        if (table.bold?.includes(data.row.index)) data.cell.styles.fontStyle = "bold";
+        if (data.section === "head" && data.column.index === lastCol) data.cell.styles.halign = "right";
+        if (data.section === "body" && table.bold?.includes(data.row.index)) data.cell.styles.fontStyle = "bold";
       },
     });
     y = ((doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY ?? y) + 11;
-    if (y > 260) {
-      doc.addPage();
-      y = 20;
-    }
+  }
+  if (y > 275) {
+    doc.addPage();
+    y = 20;
   }
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
@@ -90,9 +99,21 @@ function statementTables(all: Tx[], period: Period, profile: Profile, planned: P
   ];
 }
 
+/** Every transaction in the period, newest first, so the totals above can be traced line by line. */
+export function transactionTable(txs: Tx[]): Table {
+  const rows = [...txs]
+    .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+    .map((t) => [new Date(t.date).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" }), t.title, t.category, t.type === "income" ? `+${rp(t.amount)}` : money(-t.amount)]);
+  return { title: `Rincian transaksi (${txs.length})`, head: ["Tanggal", "Keterangan", "Kategori", "Jumlah"], rows: rows.length ? rows : [["-", "Belum ada transaksi di periode ini", "-", "-"]] };
+}
+
+export function reportTables(all: Tx[], period: Period, profile: Profile, planned: Planned[]): Table[] {
+  return [...statementTables(all, period, profile, planned), transactionTable(getStatements(all, period, profile, planned).txs)];
+}
+
 export async function exportReportPdf(all: Tx[], period: Period, profile: Profile, planned: Planned[]) {
   const { label } = periodRange(period);
-  const doc = await buildPdf("Laporan Keuangan", `${profile.name} - ${label}`, statementTables(all, period, profile, planned), `Dibuat oleh FinTar pada ${today()}. Semua angka dihitung dari transaksi yang dicatat pemilik usaha. Persediaan dan peralatan adalah nilai yang diisi pemilik.`);
+  const doc = await buildPdf("Laporan Keuangan", `${profile.name} - ${label}`, reportTables(all, period, profile, planned), `Dibuat oleh FinTar pada ${today()}. Semua angka dihitung dari transaksi yang dicatat pemilik usaha. Persediaan dan peralatan adalah nilai yang diisi pemilik.`);
   doc.save(`FinTar_Laporan_${slug(profile.name)}_${slug(label)}.pdf`);
 }
 
