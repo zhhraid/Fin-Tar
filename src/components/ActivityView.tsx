@@ -1,11 +1,12 @@
-import { ArrowLeft, Download, History, ShieldOff, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { ArrowLeft, Download, History, ShieldAlert, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { deleteMyData, useAuth } from "@/lib/cloud";
+import { deleteMyData, useAuth, verifyActivityLog, type LogCheck } from "@/lib/cloud";
 import { exportActivityJson } from "@/lib/export";
 import { clearStores, setAiConsent, useActivity, useAiConsent, type Activity } from "@/lib/financials";
 import { useTranslation } from "@/lib/i18n";
+import { hasPin, removePin, requestPin, withPin } from "@/lib/pin";
 
 const tierClass: Record<Activity["tier"], string> = { T0: "bg-muted text-muted-foreground", T1: "bg-muted text-primary", T2: "bg-success-soft text-success", T3: "bg-danger-soft text-danger" };
 
@@ -16,6 +17,17 @@ export function ActivityView({ onBack }: { onBack: () => void }) {
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const { t, lang } = useTranslation();
+  const [chain, setChain] = useState<LogCheck | null>(null);
+
+  // In account mode the server recomputes the log's hash chain whenever the log grows.
+  useEffect(() => {
+    if (auth.status !== "signedIn") return;
+    let live = true;
+    void verifyActivityLog().then((c) => live && setChain(c));
+    return () => {
+      live = false;
+    };
+  }, [auth.status, rows.length]);
 
   const tierLabel: Record<Activity["tier"], string> = {
     T0: t("tierRead"),
@@ -32,13 +44,18 @@ export function ActivityView({ onBack }: { onBack: () => void }) {
   };
 
   const erase = async () => {
+    if (hasPin() && !(await requestPin(t("pinForDelete")))) return;
     setBusy(true);
     if (auth.status === "signedIn") {
       const error = await deleteMyData();
       if (error) toast.error(lang === "en" ? `Failed to delete data: ${error}` : `Gagal menghapus data: ${error}`);
-      else toast.success(t("dataDeletedServerToast"));
+      else {
+        removePin();
+        toast.success(t("dataDeletedServerToast"));
+      }
     } else {
       clearStores();
+      removePin();
       toast.success(t("dataDeletedDeviceToast"));
       onBack();
     }
@@ -59,9 +76,19 @@ export function ActivityView({ onBack }: { onBack: () => void }) {
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <Button variant="secondary" className="h-11 text-xs" disabled={!rows.length} onClick={() => exportActivityJson(rows)}><Download size={15} /> {t("downloadLogBtn")}</Button>
+          <Button variant="secondary" className="h-11 text-xs" disabled={!rows.length} onClick={() => void withPin(t("pinForLog"), `Log aktivitas diunduh (${rows.length} catatan)`, () => exportActivityJson(rows, chain))}><Download size={15} /> {t("downloadLogBtn")}</Button>
           <Button variant="secondary" className="h-11 text-xs" disabled={!consent} onClick={() => { setAiConsent(false); toast.success(t("aiConsentRevokedToast")); }}><ShieldOff size={15} /> {consent ? t("revokeAiConsentBtn") : t("aiConsentInactiveBtn")}</Button>
         </div>
+
+        {chain && (
+          <div className={`mt-4 flex gap-3 rounded-2xl p-3 text-[11px] leading-relaxed ${chain.valid ? "bg-success-soft text-success" : "bg-danger-soft text-danger"}`}>
+            {chain.valid ? <ShieldCheck size={18} className="shrink-0" /> : <ShieldAlert size={18} className="shrink-0" />}
+            <div className="min-w-0">
+              <p className="font-bold">{chain.valid ? t("logChainOk", { n: chain.total }) : t("logChainBroken", { n: chain.brokenAt ?? 0 })}</p>
+              {chain.lastHash && chain.lastHash !== "GENESIS" && <p className="mt-0.5 truncate font-mono text-[10px] opacity-80">{t("logChainHash")}: {chain.lastHash}</p>}
+            </div>
+          </div>
+        )}
 
         <h2 className="mb-3 mt-7 flex items-center gap-2 font-bold"><History size={16} className="text-primary" /> {t("historySection")} ({rows.length})</h2>
         {!rows.length && <p className="rounded-2xl bg-muted p-4 text-center text-xs text-muted-foreground">{t("noActivityYet")}</p>}

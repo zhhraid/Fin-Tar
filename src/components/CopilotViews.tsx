@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
 import { exportProposalPdf } from "@/lib/export";
+import { withPin } from "@/lib/pin";
 import { addPlanned, cancelInsurance, chooseInsurance, clearLoan, currentInsurance, dateInputValue, daysUntil, forecastCash, getCreditProfile, getInsights, loanStage, loanStages, logActivity, openPlanned, payableTotal, removePlanned, rp, settlePlanned, shortDate, submitLoan, updatePlanned, useActivity, useLedger, useLoanApplication, usePlanned, useProfile, type Insight, type InsuranceChoice, type LoanApplication, type Planned } from "@/lib/financials";
 import { healthyCap, rankLenders, type LenderMatch } from "@/lib/scoring";
 import { useTranslation } from "@/lib/i18n";
@@ -15,6 +16,17 @@ function Header({ eyebrow, title, onBack }: { eyebrow: string; title: string; on
       <Button variant="icon" size="icon" className="rounded-full" onClick={onBack} aria-label={t("back")}><ArrowLeft size={18} /></Button>
       <div><p className="text-xs font-bold text-primary">{eyebrow}</p><h1 className="text-xl font-extrabold">{title}</h1></div>
     </header>
+  );
+}
+
+/** Shown on every financing and insurance screen: nothing here is a real financial service. */
+function SimBanner() {
+  const { t } = useTranslation();
+  return (
+    <div role="note" className="mx-5 mt-2 rounded-2xl border border-amber-300/70 bg-amber-50 px-4 py-3 text-[11px] leading-relaxed dark:border-amber-500/40 dark:bg-amber-500/10">
+      <p className="font-extrabold uppercase tracking-wide text-amber-700 dark:text-amber-400">{t("simBannerTitle")}</p>
+      <p className="mt-1 text-muted-foreground">{t("ojkDisclaimer")}</p>
+    </div>
   );
 }
 
@@ -48,6 +60,7 @@ export function LoanView({ onBack }: { onBack: () => void }) {
   return (
     <main className="pb-6">
       <Header eyebrow={t("loanEyebrow")} title={t("loanTitle")} onBack={onBack} />
+      <SimBanner />
       <div className="px-5">
         <div className="mt-3 rounded-2xl bg-muted p-4 text-xs leading-relaxed">
           <p className="font-bold text-foreground">{t("eligibilityProfile")} {profile.name}</p>
@@ -116,7 +129,7 @@ function LoanProposal({ draft, onBack }: { draft: Draft; onBack: () => void }) {
   const pdf = async () => {
     setExporting(true);
     try {
-      await exportProposalPdf(draft, ledger, profile, planned);
+      await withPin(t("pinForProposal"), `Proposal modal untuk ${draft.lender} diunduh (PDF)`, () => exportProposalPdf(draft, ledger, profile, planned));
     } catch {
       toast.error(t("pdfGenError"));
     }
@@ -125,6 +138,7 @@ function LoanProposal({ draft, onBack }: { draft: Draft; onBack: () => void }) {
   return (
     <main className="pb-6">
       <Header eyebrow={`PROPOSAL • ${draft.lender.toUpperCase()}`} title={t("reviewProposalTitle")} onBack={onBack} />
+      <SimBanner />
       <div className="px-5">
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{t("proposalAutoFilledDesc")}</p>
 
@@ -181,6 +195,7 @@ function LoanStatus({ application, onBack }: { application: LoanApplication; onB
   return (
     <main className="pb-6">
       <Header eyebrow={t("loanStatusEyebrow")} title={application.lender} onBack={onBack} />
+      <SimBanner />
       <div className="px-5">
         <div className="mt-3 rounded-3xl bg-primary p-5 text-primary-foreground">
           <p className="text-xs opacity-75">{application.purpose}</p>
@@ -259,6 +274,7 @@ export function InsuranceView({ onBack }: { onBack: () => void }) {
   return (
     <main className="pb-6">
       <Header eyebrow={t("insuranceEyebrow")} title={t("insuranceTitle")} onBack={onBack} />
+      <SimBanner />
       <div className="px-5">
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{t("insuranceIntro")}</p>
         <ol className="mt-3 space-y-1.5 rounded-2xl bg-muted p-4 text-xs leading-relaxed text-muted-foreground">
@@ -319,6 +335,7 @@ function InsuranceConfirm({ draft, profit, onBack }: { draft: PlanDraft; profit:
   return (
     <main className="pb-6">
       <Header eyebrow={t("confirmPackageEyebrow")} title={draft.name} onBack={onBack} />
+      <SimBanner />
       <div className="px-5">
         <section className="mt-3 rounded-3xl border border-primary p-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-extrabold"><span className="grid size-7 place-items-center rounded-lg bg-muted text-primary"><ShieldCheck size={15} /></span>{t("protectionSummaryCard")}</h2>
@@ -374,6 +391,7 @@ function InsuranceStatus({ choice, profit, onBack }: { choice: InsuranceChoice; 
   return (
     <main className="pb-6">
       <Header eyebrow={t("insuranceEyebrow")} title={t("appliedPackageTitle")} onBack={onBack} />
+      <SimBanner />
       <div className="px-5">
         <div className="mt-3 rounded-3xl bg-primary p-5 text-primary-foreground">
           <p className="text-xs opacity-75">{t("appliedOn")} {new Date(choice.at).toLocaleDateString(lang === "en" ? "en-US" : "id-ID", { day: "numeric", month: "long", year: "numeric" })}</p>

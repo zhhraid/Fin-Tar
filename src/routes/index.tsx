@@ -16,6 +16,7 @@ import {
   Home,
   Landmark,
   Loader2,
+  LockKeyhole,
   LogOut,
   Plus,
   ReceiptText,
@@ -36,6 +37,8 @@ import { Onboarding } from "@/components/Onboarding";
 import { ConsentGate } from "@/components/ConsentGate";
 import { FinixChat } from "@/components/FinixChat";
 import { ScanView } from "@/components/ScanView";
+import { PinGate } from "@/components/PinSheet";
+import { hasPin, requestPin, usePinRequest, withPin } from "@/lib/pin";
 import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
 import { signOut, startCloud, useAuth } from "@/lib/cloud";
 import { csvTemplate, parseCsv, suggestCategory, type CsvResult } from "@/lib/csv";
@@ -136,6 +139,7 @@ function Index() {
       {sheet?.kind === "edit" && <EntrySheet type={sheet.tx.type} tx={sheet.tx} onClose={() => setSheet(null)} />}
       {sheet?.kind === "csv" && <CsvSheet onClose={() => setSheet(null)} />}
       {sheet?.kind === "range" && <RangeSheet value={period} onApply={setPeriod} onClose={() => setSheet(null)} />}
+      <PinGate />
       {showOnboarding && <Onboarding onComplete={completeOnboarding} onOpenProfile={openProfileFromOnboarding} />}
     </Frame>
   );
@@ -373,7 +377,7 @@ function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }:
   const pdf = async () => {
     setExporting(true);
     try {
-      await exportReportPdf(ledger, period, profile, planned);
+      await withPin(t("pinForReportPdf"), `Laporan keuangan ${range.label} diunduh (PDF)`, () => exportReportPdf(ledger, period, profile, planned));
     } catch {
       toast.error(t("pdfGenError"));
     }
@@ -408,7 +412,7 @@ function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }:
 
       <div className="mt-2 grid grid-cols-3 gap-2">
         <Button variant="secondary" className="h-10 px-2 text-[11px]" disabled={exporting} onClick={pdf}>{exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} {t("pdfBtn")}</Button>
-        <Button variant="secondary" className="h-10 px-2 text-[11px]" disabled={!txs.length} onClick={() => exportTransactionsCsv(txs, profile)}><FileSpreadsheet size={14} /> {t("excelBtn")}</Button>
+        <Button variant="secondary" className="h-10 px-2 text-[11px]" disabled={!txs.length} onClick={() => void withPin(t("pinForCsv"), `${txs.length} transaksi ${range.label} diunduh (CSV)`, () => exportTransactionsCsv(txs, profile))}><FileSpreadsheet size={14} /> {t("excelBtn")}</Button>
         <Button variant="secondary" className="h-10 px-2 text-[11px]" onClick={onImport}><Upload size={14} /> {t("importBtn")}</Button>
       </div>
 
@@ -597,6 +601,8 @@ function ProfileView({ onActivity }: { onActivity: () => void }) {
           </div>
         </div>
 
+        <SecurityCard />
+
         {/* Privacy & AI */}
         <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
           <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t("privacyAiSection")}</p>
@@ -631,6 +637,24 @@ function ProfileView({ onActivity }: { onActivity: () => void }) {
         </div>
       </div>
     </main>
+  );
+}
+
+function SecurityCard() {
+  const { t } = useTranslation();
+  // Re-read after the PIN sheet closes, since creating a PIN happens there.
+  const pinOpen = usePinRequest();
+  const [on, setOn] = useState(false);
+  useEffect(() => setOn(hasPin()), [pinOpen]);
+  return (
+    <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
+      <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t("securitySection")}</p>
+      <div className="flex items-center gap-3">
+        <span className={`grid size-9 shrink-0 place-items-center rounded-xl ${on ? "bg-success-soft text-success" : "bg-muted text-muted-foreground"}`}><LockKeyhole size={17} /></span>
+        <p className="min-w-0 flex-1 text-[11px] leading-relaxed text-muted-foreground">{on ? t("pinStatusOn") : t("pinStatusOff")}</p>
+      </div>
+      <Button variant="secondary" className="mt-3 h-10 w-full rounded-xl text-xs" onClick={() => void requestPin(t("pinForChange"), "change")}>{on ? t("pinChangeBtn") : t("pinCreateBtn")}</Button>
+    </div>
   );
 }
 

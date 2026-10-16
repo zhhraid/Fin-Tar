@@ -103,7 +103,8 @@ export function parseCsv(text: string): CsvResult {
     if (!date) { result.errors.push({ line: i + 1, reason: `Tanggal "${cell(col.date)}" tidak dikenali. Pakai 2026-10-09 atau 09/10/2026.` }); continue; }
     const amount = parseAmount(cell(col.amount));
     if (!amount) { result.errors.push({ line: i + 1, reason: `Jumlah "${cell(col.amount)}" bukan angka yang valid.` }); continue; }
-    const title = cell(col.title).slice(0, 80);
+    // Undo the apostrophe toCsv puts before formula-like text.
+    const title = cell(col.title).replace(/^'(?=[=+\-@])/, "").slice(0, 80);
     const rawType = cell(col.type).toLowerCase();
     const rawCategory = cell(col.category);
     const known = allCategories.find((c) => c.toLowerCase() === rawCategory.toLowerCase());
@@ -124,7 +125,12 @@ export const csvTemplate = `tanggal;jenis;jumlah;kategori;keterangan
 
 /** Semicolon-separated so Excel with Indonesian regional settings opens it directly. */
 export function toCsv(txs: Tx[]): string {
-  const esc = (v: string) => (/[;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+  // A cell starting with = + - @ (or tab/CR) runs as a formula in Excel and Sheets; a leading
+  // apostrophe makes it plain text. Amounts are always positive, so no number is touched.
+  const esc = (raw: string) => {
+    const v = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw;
+    return /[;"\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v;
+  };
   const rows = [...txs].sort((a, b) => a.date.localeCompare(b.date)).map((t) => {
     const d = new Date(t.date);
     const date = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;

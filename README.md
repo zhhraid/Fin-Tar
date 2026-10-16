@@ -37,10 +37,11 @@ Penjagaan itu dilakukan di database lewat Row Level Security (RLS), bukan di apl
 Langkah penyiapan (sekali saja):
 
 1. Buat proyek di [supabase.com](https://supabase.com/dashboard). Paket gratis cukup.
-2. Buka **SQL Editor > New query**, tempel seluruh isi [supabase/migrations/20261009000000_fintar.sql](supabase/migrations/20261009000000_fintar.sql), lalu klik **Run**. Ini membuat 7 tabel beserta aturan keamanannya.
+2. Buka **SQL Editor > New query**, tempel seluruh isi [supabase/migrations/20261009000000_fintar.sql](supabase/migrations/20261009000000_fintar.sql), lalu klik **Run**. Ini membuat 7 tabel beserta aturan keamanannya. Ulangi untuk [supabase/migrations/20261016000000_audit_chain.sql](supabase/migrations/20261016000000_audit_chain.sql), yang membuat log aktivitas berantai hash. Jalankan berurutan sesuai nama berkasnya.
 3. Buka **Project Settings > API**. Salin **Project URL** ke `VITE_SUPABASE_URL` dan kunci **anon public** ke `VITE_SUPABASE_ANON_KEY` di `.env`. Jangan pakai kunci `service_role`.
-4. Untuk demo, buka **Authentication > Sign In / Providers > Email** dan matikan **Confirm email** supaya pendaftar langsung masuk. Jika dibiarkan aktif, pendaftar harus membuka tautan di email dulu.
-5. Jalankan ulang `npm run dev`. Layar pertama sekarang adalah halaman masuk.
+4. Buka **Authentication > Sign In / Providers > Email**: setel **Minimum password length** ke 8 dan **Password requirements** ke huruf dan angka, sama dengan aturan di aplikasi. Di paket Pro, aktifkan juga perlindungan kata sandi bocor (**Leaked password protection**, di bagian Attack Protection).
+5. Untuk demo, di halaman yang sama matikan **Confirm email** supaya pendaftar langsung masuk. Jika dibiarkan aktif, pendaftar harus membuka tautan di email dulu.
+6. Jalankan ulang `npm run dev`. Layar pertama sekarang adalah halaman masuk.
 
 Di hosting, isi variabel yang sama di pengaturan environment lalu build ulang (lihat bagian Deploy).
 
@@ -56,8 +57,18 @@ Di hosting, isi variabel yang sama di pengaturan environment lalu build ulang (l
 Catatan:
 
 - "Hapus semua data saya" menghapus seluruh baris milik akun lewat fungsi `delete_my_data()`. Akun login-nya sendiri tetap ada; menghapusnya dilakukan dari dashboard Supabase.
-- Log aktivitas tidak bisa diubah atau dihapus oleh pengguna, tetapi barisnya ditulis oleh aplikasi di browser, jadi ia bukti jejak, bukan bukti yang tahan pemalsuan.
+- Log aktivitas berantai hash: tiap baris menyimpan hash dari isinya dan hash baris sebelumnya, waktu diisi oleh server, dan baris tidak bisa diubah atau dihapus, termasuk lewat kunci `service_role`. Layar Log Aktivitas memeriksa rantainya dan memberi tanda bila ada yang rusak. Barisnya tetap ditulis oleh aplikasi, jadi isinya bukti jejak dari aplikasi, bukan bukti yang tahan pemalsuan oleh pemilik akun itu sendiri.
 - Dalam mode akun, endpoint AI menolak permintaan tanpa login dan tanpa izin AI.
+
+## Keamanan
+
+Rincian kontrol, risiko, dan batasannya ada di [docs/SECURITY.md](docs/SECURITY.md). Ringkasnya:
+
+- **PIN 6 angka** diminta sebelum data keuangan keluar dari aplikasi (PDF, Excel/CSV, proposal, log) dan sebelum menghapus semua data, seperti di aplikasi bank. Lima kali salah, terkunci 5 menit.
+- **Endpoint AI** menolak permintaan dari situs lain, membatasi ukuran kiriman, dan membatasi jumlah permintaan per pengguna (atur dengan `AI_RATE_PER_MINUTE` dan `AI_RATE_PER_DAY`).
+- **Header keamanan** (Content-Security-Policy, larangan iframe, HSTS, dan lainnya) dipasang di setiap respons server.
+- **Finix menolak tindakan Tier-3** (memindahkan uang, mengakses data orang lain, mengirim data ke luar) dengan jawaban tetap tanpa memanggil AI, dan percobaannya tercatat sebagai "Diblokir".
+- **Ekspor CSV** menetralkan teks yang bisa dijalankan sebagai rumus Excel.
 
 ## AI: Claude atau Gemini
 

@@ -31,6 +31,9 @@ export const useAuth = () =>
     () => initial,
   );
 
+/** Who the data on screen belongs to; device mode has a single local owner. */
+export const currentAccount = () => (auth.status === "signedIn" ? auth.email.toLowerCase() : "local");
+
 let client: SupabaseClient | null = null;
 const supabase = () => (client ??= createClient(supabaseUrl, supabaseAnonKey));
 
@@ -168,7 +171,8 @@ export function startCloud(onError: (message: string) => void) {
 const authMessage = (message: string) =>
   /invalid login/i.test(message) ? "Email atau kata sandi salah."
   : /already registered/i.test(message) ? "Email ini sudah terdaftar. Silakan masuk."
-  : /at least 6/i.test(message) ? "Kata sandi minimal 6 karakter."
+  : /at least \d+|should contain|should be at least/i.test(message) ? "Kata sandi minimal 8 karakter dan memuat huruf serta angka."
+  : /weak|pwned|leaked|easy to guess/i.test(message) ? "Kata sandi ini pernah bocor di internet. Pakai kata sandi lain."
   : /not confirmed/i.test(message) ? "Email belum dikonfirmasi. Cek kotak masukmu."
   : /rate limit/i.test(message) ? "Terlalu banyak percobaan. Coba lagi beberapa menit lagi."
   : message;
@@ -179,8 +183,14 @@ export async function signIn(email: string, password: string): Promise<string | 
   return error ? authMessage(error.message) : null;
 }
 
+// Rules for new accounts. Sign-in keeps accepting older, shorter passwords.
+const commonPasswords = new Set(["password1", "password123", "12345678a", "a12345678", "qwerty123", "abc12345", "abcd1234", "1234abcd", "bismillah1", "indonesia1", "rahasia123", "katasandi1", "admin123", "fintar123"]);
+export const passwordChecks = (pw: string) => ({ length: pw.length >= 8, letter: /[a-z]/i.test(pw), digit: /\d/.test(pw), common: !commonPasswords.has(pw.toLowerCase()) });
+export const strongPassword = (pw: string) => Object.values(passwordChecks(pw)).every(Boolean);
+
 /** Returns "confirm" when Supabase sent a confirmation email instead of signing in. */
 export async function signUp(email: string, password: string, businessName: string): Promise<{ error: string | null; confirm: boolean }> {
+  if (!strongPassword(password)) return { error: "Kata sandi minimal 8 karakter dan memuat huruf serta angka.", confirm: false };
   const { data, error } = await supabase().auth.signUp({ email, password, options: { data: { business_name: businessName.trim().slice(0, 40) } } });
   return { error: error ? authMessage(error.message) : null, confirm: !error && !data.session };
 }
@@ -193,6 +203,24 @@ export async function deleteMyData(): Promise<string | null> {
   if (error) return error.message;
   await signOut();
   return null;
+}
+
+/** Checks the signed-in account's password again (used to reset a forgotten PIN). */
+export async function confirmPassword(password: string): Promise<boolean> {
+  if (auth.status !== "signedIn") return false;
+  const { error } = await supabase().auth.signInWithPassword({ email: auth.email, password });
+  return !error;
+}
+
+export type LogCheck = { total: number; valid: boolean; brokenAt: number | null; lastHash: string };
+
+/** Recomputes the activity log's hash chain on the server (migration 20261016000000_audit_chain.sql). */
+export async function verifyActivityLog(): Promise<LogCheck | null> {
+  if (auth.status !== "signedIn") return null;
+  const { data, error } = await supabase().rpc("verify_my_activity_log");
+  const row = (Array.isArray(data) ? data[0] : null) as Row | null;
+  if (error || !row) return null;
+  return { total: Number(row["total"]) || 0, valid: row["valid"] === true, brokenAt: row["broken_at"] == null ? null : Number(row["broken_at"]), lastHash: String(row["last_hash"] ?? "") };
 }
 
 /** Authorization header for the AI endpoints; empty in device mode. */

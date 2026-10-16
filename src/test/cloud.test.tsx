@@ -89,6 +89,9 @@ const { Route } = await import("@/routes/index");
 const App = Route.options.component!;
 const press = (name: string | RegExp) => fireEvent.click(screen.getByRole("button", { name }));
 const rows = (table: string) => fake.tables[table] ?? [];
+// The auth screen shows the same label on its tab, its submit button and the footer link.
+const tab = (name: string) => fireEvent.click(screen.getAllByRole("button", { name })[0]!);
+const submit = (name: string) => fireEvent.click(screen.getAllByRole("button", { name }).find((b) => b.getAttribute("type") === "submit")!);
 
 describe("mode akun (Supabase)", () => {
   it("mewajibkan login, menyimpan ke tabel yang benar, dan memuat ulang data akun", async () => {
@@ -96,11 +99,16 @@ describe("mode akun (Supabase)", () => {
     expect(await screen.findByText("Masuk ke akunmu")).toBeInTheDocument();
 
     // Daftar: usaha dibuat dari nama yang diisi
-    press("Daftar");
+    tab("Daftar");
     fireEvent.change(screen.getByLabelText("Nama usaha"), { target: { value: "Toko Awan" } });
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "awan@contoh.id" } });
-    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "rahasia123" } });
-    press("Daftar");
+    // A weak password is refused before anything is sent to Supabase.
+    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "rahasia" } });
+    submit("Daftar");
+    expect(await screen.findByText(/Kata sandi minimal 8 karakter/)).toBeInTheDocument();
+    expect(rows("businesses")).toHaveLength(0);
+    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "AwanRoti2026" } });
+    submit("Daftar");
 
     expect(await screen.findByText(/Asisten keuangan • Toko Awan/)).toBeInTheDocument();
     expect(screen.getByText(/Catat pemasukan pertamamu/)).toBeInTheDocument();
@@ -124,8 +132,8 @@ describe("mode akun (Supabase)", () => {
     press("Keluar");
     expect(await screen.findByText("Masuk ke akunmu")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "awan@contoh.id" } });
-    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "rahasia123" } });
-    press("Masuk");
+    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "AwanRoti2026" } });
+    submit("Masuk");
 
     expect(await screen.findByText("Jualan roti")).toBeInTheDocument();
     expect(screen.getByRole("heading", { level: 2, name: "Rp300.000" })).toBeInTheDocument();

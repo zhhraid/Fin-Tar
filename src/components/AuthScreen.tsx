@@ -1,8 +1,8 @@
-import { Loader2, MailCheck, Sparkles, TrendingUp } from "lucide-react";
+import { Check, Loader2, MailCheck, Sparkles, TrendingUp, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Label, LanguageSwitch } from "@/components/fields";
-import { signIn, signUp } from "@/lib/cloud";
+import { passwordChecks, signIn, signUp, strongPassword } from "@/lib/cloud";
 import { useTranslation } from "@/lib/i18n";
 
 const fieldClass = "h-11 w-full rounded-xl border border-border/80 bg-background/60 px-3.5 text-xs text-foreground placeholder:text-muted-foreground/60 outline-none transition-all focus:border-primary focus:bg-background focus:ring-2 focus:ring-primary/20";
@@ -23,6 +23,7 @@ export function AuthScreen() {
     setBusy(true);
     setError(null);
     if (mode === "in") setError(await signIn(email.trim(), password));
+    else if (!strongPassword(password)) setError(t("passwordWeakError"));
     else {
       const res = await signUp(email.trim(), password, business);
       setError(res.error);
@@ -136,11 +137,12 @@ export function AuthScreen() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  minLength={6}
+                  minLength={mode === "up" ? 8 : 6}
                   className={fieldClass}
-                  placeholder={t("passwordPlaceholder")}
+                  placeholder={mode === "up" ? t("passwordPlaceholderNew") : t("passwordPlaceholder")}
                 />
               </div>
+              {mode === "up" && password && <PasswordHints password={password} />}
             </div>
 
             {error && (
@@ -173,5 +175,24 @@ export function AuthScreen() {
         </div>
       </div>
     </main>
+  );
+}
+
+function PasswordHints({ password }: { password: string }) {
+  const { t } = useTranslation();
+  const c = passwordChecks(password);
+  const rules = [
+    { ok: c.length, label: t("pwRuleLength") },
+    { ok: c.letter && c.digit, label: t("pwRuleMix") },
+    { ok: c.common, label: t("pwRuleCommon") },
+  ];
+  return (
+    <ul className="mt-2 space-y-1" aria-label={t("pwRulesAria")}>
+      {rules.map((r) => (
+        <li key={r.label} className={`flex items-center gap-1.5 text-[11px] font-semibold ${r.ok ? "text-success" : "text-muted-foreground"}`}>
+          {r.ok ? <Check size={12} /> : <X size={12} />} {r.label}
+        </li>
+      ))}
+    </ul>
   );
 }

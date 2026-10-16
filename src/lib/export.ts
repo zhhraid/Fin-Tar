@@ -115,4 +115,6 @@ export async function exportProposalPdf(input: ProposalInput, all: Tx[], profile
 }
 
 export const exportTransactionsCsv = (txs: Tx[], profile: Profile) => download(`FinTar_Transaksi_${slug(profile.name)}.csv`, new Blob([toCsv(txs)], { type: "text/csv;charset=utf-8" }));
-export const exportActivityJson = (rows: Activity[]) => download("FinTar_Log_Aktivitas.json", new Blob([JSON.stringify(rows, null, 2)], { type: "application/json" }));
+/** The server's chain check, when there is one, goes in the file so the latest hash can be compared later. */
+export const exportActivityJson = (rows: Activity[], chain: { total: number; valid: boolean; lastHash: string } | null = null) =>
+  download("FinTar_Log_Aktivitas.json", new Blob([JSON.stringify(chain ? { exportedAt: new Date().toISOString(), chain, rows } : rows, null, 2)], { type: "application/json" }));
