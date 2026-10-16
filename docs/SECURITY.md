@@ -30,7 +30,7 @@ Dokumen ini menjelaskan bagaimana FinTar melindungi data keuangan pelaku UMKM, a
 | Kontrol | Penjelasan | Berkas | Bukti |
 |---|---|---|---|
 | Row Level Security di semua tabel | Database sendiri yang membatasi baris per pemilik, bukan kode aplikasi. Kunci `anon` tanpa login tidak bisa membaca apa pun. | `supabase/migrations/20261009000000_fintar.sql` | Diuji di PostgreSQL 16: pengguna B tidak melihat satu pun baris log milik A |
-| Kata sandi kuat | Akun baru wajib minimal 8 karakter, berisi huruf dan angka, dan bukan kata sandi umum. Dicek di aplikasi dan sebaiknya juga disetel di Supabase (lihat README). | `src/lib/cloud.ts`, `src/components/AuthScreen.tsx` | `src/test/cloud.test.tsx` |
+| Kata sandi kuat | Akun baru wajib minimal 8 karakter, berisi huruf kecil, huruf besar, angka, dan simbol, serta bukan kata sandi umum. Aturan yang sama disetel di Supabase, jadi tidak bisa dilewati dengan mendaftar langsung lewat API (lihat README). | `src/lib/cloud.ts`, `src/components/AuthScreen.tsx` | `src/test/cloud.test.tsx` |
 | PIN 6 angka (gaya m-banking) | Diminta sebelum data keluar dari aplikasi (laporan PDF, Excel/CSV, proposal modal, log) dan sebelum "Hapus semua data". PIN lemah (111111, 123456) ditolak. Lima kali salah, terkunci 5 menit, dan kejadiannya masuk log. PIN disimpan sebagai hash PBKDF2-SHA256 150.000 iterasi dengan salt acak. | `src/lib/pin.ts`, `src/components/PinSheet.tsx` | `src/test/pin.test.tsx` |
 | Lupa PIN | Mode akun: verifikasi ulang kata sandi akun. Mode perangkat: tidak ada akun untuk memulihkan, jadi satu-satunya jalan adalah menghapus data perangkat. Dengan begitu, orang yang tidak tahu PIN tidak bisa membaca datanya. | `src/components/PinSheet.tsx` | Diperiksa manual |
 | Hak hapus data | `delete_my_data()` menghapus semua baris milik pemanggil, tanpa parameter, jadi tidak bisa dipakai untuk menghapus data orang lain. | migrasi `20261016000000_audit_chain.sql` | `src/test/cloud.test.tsx`, uji PostgreSQL |
@@ -119,7 +119,7 @@ Skala: R = rendah, S = sedang, T = tinggi. Risiko sisa adalah tingkat risiko set
 | 7 | Riwayat aktivitas dipalsukan | R | S | Rantai hash, waktu dari server, tidak bisa diubah atau dihapus | R–S (lihat batasan) |
 | 8 | Rumus berbahaya di file CSV | R | S | Netralisasi rumus saat ekspor | R |
 | 9 | Pengguna mengira simulasi adalah pinjaman sungguhan | S | T | Banner simulasi dan disclaimer OJK di setiap layar terkait | R |
-| 10 | Kata sandi lemah atau bocor | T | T | Minimal 8 karakter dengan huruf dan angka, tolak kata sandi umum, perlindungan kata sandi bocor di Supabase | S (perlindungan kata sandi bocor perlu paket Pro) |
+| 10 | Kata sandi lemah atau bocor | T | T | Minimal 8 karakter dengan huruf kecil, huruf besar, angka, dan simbol (di aplikasi dan di Supabase), tolak kata sandi umum, perlindungan kata sandi bocor di Supabase | S (perlindungan kata sandi bocor perlu paket Pro) |
 | 11 | Data dikirim ke penyedia AI | Pasti, saat AI dipakai | S | Persetujuan eksplisit, bisa dicabut, foto tidak disimpan | S (belum ada penyamaran data pribadi) |
 
 ## 6. Batasan yang diketahui

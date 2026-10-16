@@ -183,7 +183,9 @@ function PasswordHints({ password }: { password: string }) {
   const c = passwordChecks(password);
   const rules = [
     { ok: c.length, label: t("pwRuleLength") },
-    { ok: c.letter && c.digit, label: t("pwRuleMix") },
+    { ok: c.lower && c.upper, label: t("pwRuleCase") },
+    { ok: c.digit, label: t("pwRuleDigit") },
+    { ok: c.symbol, label: t("pwRuleSymbol") },
     { ok: c.common, label: t("pwRuleCommon") },
   ];
   return (

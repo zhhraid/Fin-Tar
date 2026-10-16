@@ -103,11 +103,12 @@ describe("mode akun (Supabase)", () => {
     fireEvent.change(screen.getByLabelText("Nama usaha"), { target: { value: "Toko Awan" } });
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "awan@contoh.id" } });
     // A weak password is refused before anything is sent to Supabase.
-    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "rahasia" } });
+    // Letters and digits alone are not enough any more: uppercase and a symbol are required too.
+    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "awanroti2026" } });
     submit("Daftar");
     expect(await screen.findByText(/Kata sandi minimal 8 karakter/)).toBeInTheDocument();
     expect(rows("businesses")).toHaveLength(0);
-    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "AwanRoti2026" } });
+    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "Awan#Roti2026" } });
     submit("Daftar");
 
     expect(await screen.findByText(/Asisten keuangan • Toko Awan/)).toBeInTheDocument();
@@ -132,7 +133,7 @@ describe("mode akun (Supabase)", () => {
     press("Keluar");
     expect(await screen.findByText("Masuk ke akunmu")).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Email"), { target: { value: "awan@contoh.id" } });
-    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "AwanRoti2026" } });
+    fireEvent.change(screen.getByLabelText("Kata sandi"), { target: { value: "Awan#Roti2026" } });
     submit("Masuk");
 
     expect(await screen.findByText("Jualan roti")).toBeInTheDocument();

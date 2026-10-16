@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { passwordChecks, strongPassword } from "@/lib/cloud";
 import { resetRateLimits } from "@/lib/guard.server";
 import { forbiddenRequest } from "@/lib/guardrails";
 import { handleFinixChat } from "@/lib/finix.server";
@@ -93,5 +94,25 @@ describe("pendeteksi permintaan T3", () => {
     "How much cash will I have in 30 days?",
   ])("tetap menjawab pertanyaan biasa: %s", (text) => {
     expect(forbiddenRequest(text)).toBeNull();
+  });
+});
+
+describe("syarat kata sandi akun baru (sama dengan setelan Supabase)", () => {
+  it.each([
+    ["Roti#Manis2026", true],
+    ["Bu-Siti_88xyz", true],
+    ["Kue~Lapis 9a", true],
+    ["rotimanis2026", false], // tanpa huruf besar dan simbol
+    ["ROTI#MANIS2026", false], // tanpa huruf kecil
+    ["Roti#Manis", false], // tanpa angka
+    ["RotiManis2026", false], // tanpa simbol
+    ["R#t1a", false], // terlalu pendek
+    ["P@ssw0rd1", false], // kata sandi umum
+  ])("%s → %s", (pw, ok) => {
+    expect(strongPassword(pw)).toBe(ok);
+  });
+
+  it("mengenali semua simbol yang diterima Supabase", () => {
+    for (const ch of "!@#$%^&*()_+-=[]{};'\\:\"|<>?,./`~") expect(passwordChecks(`Abcdefg1${ch}`).symbol).toBe(true);
   });
 });
