@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { parseAmount, parseCsv, suggestCategory, toCsv } from "@/lib/csv";
 import { cashBalance, dateInputValue, defaultProfile, forecastCash, getInsights, getStatements, parseLedger, type Planned, type Tx } from "@/lib/financials";
+import { reportTables } from "@/lib/export";
 import { localFinixReply } from "@/lib/finix-local";
 import { installment, lenders, scoreLender } from "@/lib/scoring";
 
@@ -20,6 +21,18 @@ const ledger: Tx[] = [
   tx("expense", 200000, "Pengiriman", 37),
 ];
 const cash = 2600000; // sum of the ledger above
+
+describe("PDF laporan", () => {
+  it("memuat rincian tiap transaksi periode itu, termasuk yang baru dicatat hari ini", () => {
+    const fresh: Tx = { id: "baru", title: "Pesanan tumpeng", amount: 777000, type: "income", category: "Penjualan", date: new Date().toISOString() };
+    const tables = reportTables([...ledger, fresh], "month", defaultProfile, []);
+    const detail = tables.at(-1)!;
+
+    expect(detail.title).toMatch(/^Rincian transaksi/);
+    expect(detail.rows[0]).toEqual([expect.any(String), "Pesanan tumpeng", "Penjualan", "+Rp777.000"]);
+    expect(detail.rows.some((r) => r[1] === "Bahan baku" && r[3]!.startsWith("("))).toBe(true);
+  });
+});
 
 describe("ekspor CSV", () => {
   it("menetralkan keterangan yang bisa dijalankan sebagai rumus Excel", () => {
