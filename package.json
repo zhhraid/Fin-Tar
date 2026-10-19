@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "agent:eval": "AGENT_EVIDENCE=1 vitest run src/test/agent.test.ts"
   },
   "overrides": {
     "rolldown": "1.2.1"

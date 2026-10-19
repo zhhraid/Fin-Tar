@@ -1,5 +1,8 @@
 import "@testing-library/jest-dom/vitest";
 
+// The UI follows the browser language; the flow tests are written against the Indonesian UI.
+window.localStorage.setItem("fintar-lang", "id");
+
 Object.defineProperty(window, "scrollTo", {
   writable: true,
   value: () => {},
