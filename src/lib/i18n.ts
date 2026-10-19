@@ -9,7 +9,9 @@ export function getLanguage(): Language {
   if (typeof window !== "undefined") {
     try {
       const saved = window.localStorage.getItem("fintar-lang");
+      // A saved choice wins; otherwise follow the browser (Indonesian browsers get Indonesian).
       if (saved === "id" || saved === "en") currentLang = saved;
+      else currentLang = /^id\b/i.test(window.navigator.language ?? "") ? "id" : "en";
     } catch {
       /* ignore */
     }
@@ -36,7 +38,9 @@ export function useLanguage(): Language {
       return () => listeners.delete(cb);
     },
     getLanguage,
-    getLanguage
+    // The server cannot know the browser's language; hydrate in the server's language,
+    // then React switches to the browser's choice right after.
+    () => "id" as Language
   );
 }
 

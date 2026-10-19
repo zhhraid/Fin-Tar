@@ -194,3 +194,70 @@ export async function imageToJson(prompt: string, dataUrl: string, schema: Recor
     throw new AiError("Jawaban AI tidak bisa dibaca. Coba foto ulang.", 502);
   }
 }
+
+/* ---------- Agent turns (tool calling) ---------- */
+// One model turn of the FinTar agent loop. The loop itself lives in agent.server.ts; this
+// file only translates between a provider-neutral history and Claude / Gemini requests.
+// Assistant turns keep the provider's raw content (thinking blocks, Gemini thought
+// signatures) so it can be sent back unchanged within the same run.
+
+export type AgentToolSpec = { name: string; description: string; input_schema: { type: "object"; properties: Record<string, unknown>; required?: string[] } };
+export type AgentCall = { id: string; name: string; input: unknown };
+export type AgentMsg =
+  | { role: "user"; text: string }
+  | { role: "assistant"; text: string; calls: AgentCall[]; raw: unknown }
+  | { role: "tool"; results: { id: string; name: string; content: string; isError?: boolean }[] };
+export type AgentReply = { text: string; calls: AgentCall[]; raw: unknown; refused: boolean };
+
+async function claudeAgentTurn(system: string, history: AgentMsg[], tools: AgentToolSpec[], signal: AbortSignal): Promise<AgentReply> {
+  const model = claudeModel();
+  const messages: Anthropic.Beta.BetaMessageParam[] = history.map((m) =>
+    m.role === "user"
+      ? { role: "user", content: m.text }
+      : m.role === "assistant"
+        ? { role: "assistant", content: m.raw as Anthropic.Beta.BetaContentBlockParam[] }
+        : { role: "user", content: m.results.map((r) => ({ type: "tool_result" as const, tool_use_id: r.id, content: r.content, ...(r.isError ? { is_error: true } : {}) })) },
+  );
+  try {
+    const client = new Anthropic({ apiKey: env("ANTHROPIC_API_KEY") });
+    const res = await client.beta.messages.create(
+      { model, max_tokens: 16000, system, messages, tools, ...claudeExtras(model, "medium") },
+      { signal },
+    );
+    const calls = res.content.flatMap((b) => (b.type === "tool_use" ? [{ id: b.id, name: b.name, input: b.input }] : []));
+    const text = res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("");
+    // A refusal or a cut-off turn can carry an incomplete tool input; never run those calls.
+    const unsafe = res.stop_reason === "refusal" || res.stop_reason === "max_tokens";
+    return { text, calls: unsafe ? [] : calls, raw: res.content, refused: res.stop_reason === "refusal" };
+  } catch (e) {
+    throw claudeError(e);
+  }
+}
+
+type GeminiPart = { text?: string; thought?: boolean; functionCall?: { id?: string; name: string; args?: unknown }; functionResponse?: unknown };
+
+async function geminiAgentTurn(system: string, history: AgentMsg[], tools: AgentToolSpec[], signal: AbortSignal): Promise<AgentReply> {
+  const contents = history.map((m) =>
+    m.role === "user"
+      ? { role: "user", parts: [{ text: m.text }] }
+      : m.role === "assistant"
+        ? { role: "model", parts: m.raw as GeminiPart[] }
+        : { role: "user", parts: m.results.map((r) => ({ functionResponse: { name: r.name, ...(r.id.startsWith("g-") ? {} : { id: r.id }), response: { result: r.content, ...(r.isError ? { error: true } : {}) } } })) },
+  );
+  const res = await geminiFetch("generateContent", {
+    systemInstruction: { parts: [{ text: system }] },
+    contents,
+    tools: [{ functionDeclarations: tools.map((t) => ({ name: t.name, description: t.description, parameters: t.input_schema })) }],
+    generationConfig: { temperature: 0.2 },
+  }, signal);
+  const body = (await res.json()) as { candidates?: { content?: { parts?: GeminiPart[] }; finishReason?: string }[] };
+  const parts = body.candidates?.[0]?.content?.parts ?? [];
+  const calls = parts.flatMap((p, i) => (p.functionCall ? [{ id: p.functionCall.id ?? `g-${i}-${p.functionCall.name}`, name: p.functionCall.name, input: p.functionCall.args ?? {} }] : []));
+  const text = parts.filter((p) => !p.thought && p.text).map((p) => p.text).join("");
+  const refused = body.candidates?.[0]?.finishReason === "SAFETY";
+  return { text, calls: refused ? [] : calls, raw: parts, refused };
+}
+
+export function agentTurn(system: string, history: AgentMsg[], tools: AgentToolSpec[], signal: AbortSignal): Promise<AgentReply> {
+  return aiProvider() === "claude" ? claudeAgentTurn(system, history, tools, signal) : geminiAgentTurn(system, history, tools, signal);
+}

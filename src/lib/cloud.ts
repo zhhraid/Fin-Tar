@@ -140,7 +140,7 @@ async function enter(user: User | null) {
     loadedFor = null;
     setRemote(null);
     clearStores();
-    window.localStorage.removeItem("fintar-finix-chat"); // chat history belongs to the account that just left
+    window.localStorage.removeItem("fintar-agent-runs-v1"); // agent history belongs to the account that just left
     setAuth({ status: "signedOut" });
     return;
   }
