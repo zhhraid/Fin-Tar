@@ -1,15 +1,56 @@
 # FinTar
 
+**FinTar is an AI finance agent for small business owners (Indonesian UMKM).** Built for the 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Live: <https://fin-tar-seven.vercel.app>
+
+Its agent, **Finix**, completes real financial tasks on the owner's own records:
+
+| Requirement | In FinTar |
+|---|---|
+| Intent understanding | Names the task (cash health, cost analysis, financing, record a transaction, overview) and shows it |
+| Task planning | Shows an ordered plan, then chains tools, using each result to decide the next step |
+| Safe execution | 11 tools in permission tiers: T0 read and T1 suggest run automatically; **T2 actions are only proposals**; T3 (moving money, other people's data, sending data out) is refused. Inputs validated, hard limits per run, unaffordable loans blocked |
+| User control | Approve / Reject for every action, PIN for high-value actions and financing, tamper-evident activity log |
+| Measurable value | Cash runway (days), lowest balance, monthly savings, installment share, runway days gained by an action; impact panel; 10-scenario evaluation (10/10 pass) |
+
+Also: bookkeeping (manual, receipt scan, CSV), P&L / cash flow / balance sheet with PDF and Excel export, 30-day cash forecast and alerts, simulated financing and insurance matching. UI in English or Indonesian (follows the browser).
+
+**Documents:** [Technical documentation](docs/TECHNICAL.md) (architecture, algorithms, security design) · [Security self-assessment](docs/SECURITY-SELF-ASSESSMENT.md) (permission tiers, known risks) · [Execution evidence](docs/evidence/agent-scenarios.md) (scenario results and event logs) · [PRD](docs/PRD.md)
+
+### Run it
+
+```sh
+npm i
+cp .env.example .env      # every value is optional
+npm run dev
+```
+
+With no environment variables the app runs in **device mode** (data in the browser) and Finix runs as the built-in rule-based agent, so the demo needs no keys. Add `ANTHROPIC_API_KEY` (Claude) or `GEMINI_API_KEY` (Gemini) for the model-driven agent, and `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` for accounts (run the two SQL files in `supabase/migrations/` first). Deploy: `npm run build && npm start`, or connect the repo to Vercel/Netlify. Details in [docs/TECHNICAL.md](docs/TECHNICAL.md#7-deployment).
+
+### Tests
+
+```sh
+npm test              # all tests: agent scenarios, safe execution, model loop (mocked), security, PIN, finance logic, UI flows
+npm run agent:eval    # the 10 agent scenarios; writes docs/evidence/agent-scenarios.md
+npx tsc --noEmit
+```
+
+All lenders and insurance products are simulated; no money moves. Final financing decisions belong to licensed institutions.
+
+---
+
+## Bahasa Indonesia
+
+
 Aplikasi keuangan untuk UMKM (PWA, mobile-first): catat pemasukan dan pengeluaran, pindai struk, lihat laporan keuangan otomatis, tanya Finix, lalu ajukan modal dari catatan yang sama.
 
-Repositori ini adalah gabungan dua versi FinTar. Spesifikasi produk ada di [docs/PRD.md](docs/PRD.md). Antarmuka masih berbahasa Indonesia; PRD meminta bahasa Inggris, dan itu belum dikerjakan.
+Repositori ini adalah gabungan dua versi FinTar. Spesifikasi produk ada di [docs/PRD.md](docs/PRD.md). Antarmuka tersedia dalam bahasa Inggris dan Indonesia, mengikuti bahasa browser (bisa diganti di Profil).
 
 | Fitur | Keterangan |
 |---|---|
 | Catat transaksi | Manual dengan kategori otomatis, pindai struk lalu koreksi hasil bacaan, atau impor CSV |
 | Laporan | Laba rugi, arus kas, dan neraca dari transaksi, dengan penjelasan bahasa sehari-hari; ekspor PDF dan CSV |
 | Peringatan & proyeksi | Proyeksi kas 30 hari termasuk utang pemasok dan belanja terjadwal |
-| Finix | Asisten yang membaca catatan: kondisi keuangan, biaya yang bisa dihemat, rencana mencapai target omzet |
+| Finix (agen AI) | Memahami tugas, menyusun rencana, menjalankan alat bertingkat (T0–T3) pada catatanmu, lalu mengusulkan tindakan yang baru berjalan setelah kamu setujui; dampaknya diukur (hari kas aman, potensi hemat) |
 | Ajukan Modal | Skor kecocokan dengan alasannya, proposal PDF terisi otomatis, status pengajuan (simulasi) |
 | Asuransi Toko | Rekomendasi perlindungan usaha (simulasi) |
 | Privasi | Izin sebelum data dikirim ke AI, log aktivitas, dan hapus semua data |

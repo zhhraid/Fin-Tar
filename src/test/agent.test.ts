@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { handleAgent } from "@/lib/agent.server";
 import { runTool, type Snapshot } from "@/lib/agent/tools";
@@ -236,3 +236,55 @@ function writeEvidence(rows: { s: Scenario; r: Result; ok: boolean; why?: string
   mkdirSync("docs/evidence", { recursive: true });
   writeFileSync("docs/evidence/agent-scenarios.md", lines.join("\n"));
 }
+
+describe("loop agen dengan model AI (respons Gemini tiruan)", () => {
+  const fetchMock = vi.fn<typeof fetch>();
+  const gemini = (parts: unknown[]) => new Response(JSON.stringify({ candidates: [{ content: { role: "model", parts }, finishReason: "STOP" }] }), { status: 200 });
+  const ask = (question: string) => handleAgent(new Request("https://fintar.test/api/agent", { method: "POST", headers: { "content-type": "application/json", origin: "https://fintar.test", "x-real-ip": "10.2.2.2" }, body: JSON.stringify({ question, lang: "en", ...tight() }) }));
+  const events = async (res: Response) => (await res.text()).trim().split("\n").map((l) => JSON.parse(l) as AgentEvent);
+
+  beforeEach(() => {
+    vi.stubEnv("ANTHROPIC_API_KEY", "");
+    vi.stubEnv("GEMINI_API_KEY", "kunci-uji");
+    vi.stubEnv("AI_PROVIDER", "gemini");
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    resetRateLimits();
+    fetchMock.mockReset();
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  it("merencanakan, memanggil alat, mengirim hasilnya balik, lalu menjawab", async () => {
+    fetchMock
+      .mockResolvedValueOnce(gemini([{ functionCall: { name: "plan_task", args: { intent: "cash_health", steps: ["Forecast cash", "Check bills"] } } }, { functionCall: { name: "forecast_cash", args: {} } }]))
+      .mockResolvedValueOnce(gemini([{ functionCall: { name: "transfer_funds", args: { amount: 1 } } }]))
+      .mockResolvedValueOnce(gemini([{ text: "Cash runs short on **day 6**." }]));
+
+    const ev = await events(await ask("Is my cash safe?"));
+
+    expect(ev).toContainEqual({ type: "intent", intent: "cash_health", label: "Cash health check" });
+    expect(ev).toContainEqual({ type: "plan", steps: ["Forecast cash", "Check bills"] });
+    expect(ev.filter((e) => e.type === "step").map((e) => e.type === "step" && `${e.step.tool}:${e.step.status}`)).toEqual(["plan_task:done", "forecast_cash:done", "transfer_funds:blocked"]);
+    expect(ev).toContainEqual({ type: "answer", text: "Cash runs short on **day 6**." });
+    expect(ev.at(-1)).toEqual({ type: "done", mode: "gemini" });
+    // The tool results went back to the model, including the refusal of the unknown tool.
+    const second = JSON.parse(String(fetchMock.mock.calls[1]![1]!.body)) as { contents: { role: string; parts: { functionResponse?: { name: string; response: { result: string } } }[] }[] };
+    const sent = second.contents.at(-1)!.parts.map((p) => p.functionResponse?.name);
+    expect(sent).toEqual(["plan_task", "forecast_cash"]);
+    expect(second.contents.at(-1)!.parts[1]!.functionResponse!.response.result).toMatch(/"deficit"/);
+  });
+
+  it("beralih ke agen bawaan bila AI gagal, tugas tetap selesai", async () => {
+    fetchMock.mockResolvedValue(new Response('{"error":{"code":403}}', { status: 403 }));
+
+    const ev = await events(await ask("Is my cash safe?"));
+
+    expect(ev.some((e) => e.type === "notice")).toBe(true);
+    expect(ev.some((e) => e.type === "proposal")).toBe(true);
+    expect(ev.at(-1)).toEqual({ type: "done", mode: "rules" });
+  });
+});
