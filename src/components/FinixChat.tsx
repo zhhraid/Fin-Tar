@@ -73,7 +73,11 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
       /* storage unavailable */
     }
   }, [runs, busy]);
-  useEffect(() => bottomRef.current?.scrollIntoView?.({ block: "end" }), [runs]);
+  // Braces matter: newer browsers return a Promise from scrollIntoView, and React would call
+  // a returned value as the effect's cleanup.
+  useEffect(() => {
+    void bottomRef.current?.scrollIntoView?.({ block: "end" });
+  }, [runs]);
   useEffect(() => {
     fetch("/api/agent").then((r) => r.json()).then((d: { provider?: string }) => setProvider(d.provider ?? null)).catch(() => {});
   }, []);

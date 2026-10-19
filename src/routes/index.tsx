@@ -82,7 +82,9 @@ function Index() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const auth = useAuth();
   const { t } = useTranslation();
-  useEffect(() => startCloud((message) => toast.error(message)), []);
+  useEffect(() => {
+    startCloud((message) => toast.error(message));
+  }, []);
   // The next person to sign in starts on Beranda, not on the screen the last one left.
   useEffect(() => {
     if (auth.status !== "signedOut") return;
@@ -646,7 +648,9 @@ function SecurityCard() {
   // Re-read after the PIN sheet closes, since creating a PIN happens there.
   const pinOpen = usePinRequest();
   const [on, setOn] = useState(false);
-  useEffect(() => setOn(hasPin()), [pinOpen]);
+  useEffect(() => {
+    setOn(hasPin());
+  }, [pinOpen]);
   return (
     <div className="rounded-2xl border border-border/70 bg-card p-4 shadow-xs">
       <p className="mb-2.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t("securitySection")}</p>
