@@ -40,7 +40,10 @@ function loadRuns(): Run[] {
   if (typeof window === "undefined") return [];
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as Run[]).map((r) => ({ ...r, busy: false })) : [];
+    const parsed: unknown = raw ? JSON.parse(raw) : [];
+    // Saved by an older or newer version, or edited by hand: keep only runs this screen can draw.
+    const ok = (r: Partial<Run>) => typeof r.id === "string" && typeof r.question === "string" && typeof r.answer === "string" && [r.plan, r.steps, r.metrics, r.proposals].every(Array.isArray);
+    return Array.isArray(parsed) ? (parsed as Partial<Run>[]).filter((r) => r && typeof r === "object" && ok(r)).map((r) => ({ ...(r as Run), busy: false })) : [];
   } catch {
     return [];
   }

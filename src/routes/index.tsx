@@ -37,6 +37,7 @@ import { Onboarding } from "@/components/Onboarding";
 import { ConsentGate } from "@/components/ConsentGate";
 import { FinixChat } from "@/components/FinixChat";
 import { ScanView } from "@/components/ScanView";
+import { ScreenBoundary } from "@/components/ScreenBoundary";
 import { PinGate } from "@/components/PinSheet";
 import { hasPin, requestPin, usePinRequest, withPin } from "@/lib/pin";
 import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
@@ -126,7 +127,7 @@ function Index() {
       <div className="relative flex-1 app-scroll">
         {view === "home" && <HomeView onNavigate={navigate} onAdd={add} onEdit={(tx) => setSheet({ kind: "edit", tx })} />}
         {view === "reports" && <ReportsView period={period} onPeriod={setPeriod} onPickRange={() => setSheet({ kind: "range" })} onAsk={askFinix} onEdit={(tx) => setSheet({ kind: "edit", tx })} onImport={() => setSheet({ kind: "csv" })} />}
-        {view === "finix" && <FinixGate><FinixChat prompt={finixPrompt} onPromptUsed={() => setFinixPrompt(null)} /></FinixGate>}
+        {view === "finix" && <FinixGate><ScreenBoundary onReset={() => { try { window.localStorage.removeItem("fintar-agent-runs-v1"); } catch { /* storage unavailable */ } }}><FinixChat prompt={finixPrompt} onPromptUsed={() => setFinixPrompt(null)} /></ScreenBoundary></FinixGate>}
         {view === "profile" && <ProfileView onActivity={() => navigate("activity")} />}
         {view === "loan" && <LoanView onBack={() => navigate("home")} />}
         {view === "insurance" && <InsuranceView onBack={() => navigate("home")} />}
