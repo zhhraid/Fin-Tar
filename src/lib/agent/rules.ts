@@ -30,7 +30,7 @@ const incomeWord = /\b(terjual|jual|menjual|sold|sell|terima|received|dapat|pema
 export function classifyIntent(text: string): Intent {
   const t = text.toLowerCase();
   if (recordVerb.test(t) && parseMoney(t) !== null && !/\?$/.test(t.trim())) return "record_transaction";
-  if (/(modal|pinjam|kredit|\bkur\b|loan|financ|borrow|funding|capital|lender)/.test(t)) return "financing";
+  if (/(modal|pinjam|kredit|\bkur\b|loan|financ|borrow|funding|capital|lender)/.test(t) || /\b(need|butuh)\b.*(\brp|\d|juta|million)/.test(t)) return "financing";
   if (/(biaya|hemat|boros|ongkir|pengeluaran|\bcost|expense|spend|saving|\bsave\b|cut\b|cheaper)/.test(t)) return "cost_analysis";
   if (/(\bkas\b|cash|aman|runway|minus|cukup|shortfall|saldo|tagihan|utang|hutang|debt|\bbill|afford|jatuh tempo|due)/.test(t)) return "cash_health";
   if (/(laporan|ringkas|kondisi|keadaan|overview|summary|report|performa|sehat|how.*(business|doing)|bagaimana usaha)/.test(t)) return "overview";
