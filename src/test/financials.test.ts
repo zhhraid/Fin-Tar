@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
 import { parseAmount, parseCsv, suggestCategory, toCsv } from "@/lib/csv";
-import { cashBalance, dateInputValue, defaultProfile, forecastCash, getInsights, getStatements, parseLedger, type Planned, type Tx } from "@/lib/financials";
+import { cashBalance, categoryLabel, dateInputValue, defaultProfile, forecastCash, getInsights, getStatements, parseLedger, type Planned, type Tx } from "@/lib/financials";
 import { reportTables } from "@/lib/export";
 import { localFinixReply } from "@/lib/finix-local";
-import { installment, lenders, scoreLender } from "@/lib/scoring";
+import { installment, lenders, purposeLabel, scoreLender } from "@/lib/scoring";
 
 const DAY = 86400000;
 const daysAgo = (n: number) => new Date(Date.now() - n * DAY).toISOString();
@@ -217,5 +217,38 @@ describe("Finix mode demo", () => {
     const reply = localFinixReply("Gimana kondisi keuanganku?", ledger, defaultProfile, [plan("expense", 3000000, 9)]);
 
     expect(reply).toContain("minus pada hari ke-9");
+  });
+});
+
+describe("bahasa Inggris", () => {
+  const indonesian = /\b(kas|biaya|pemasukan|pengeluaran|naik|hari|jatuh tempo|utang|laba|dari|dan|untuk|dalam)\b/i;
+
+  it("peringatan ditulis dalam bahasa Inggris", () => {
+    const insights = getInsights(ledger, defaultProfile, [plan("expense", 3000000, 9), { ...plan("debt", 100000, 5), label: "Flour debt" }], "en");
+
+    expect(insights[0]).toMatchObject({ title: "Cash projected to go negative in 9 days" });
+    expect(insights.map((i) => i.title)).toContain("Delivery costs up 150%");
+    for (const i of insights) expect(`${i.title} ${i.text}`).not.toMatch(indonesian);
+  });
+
+  it("kategori, laporan dan alasan skor ikut bahasa Inggris", () => {
+    expect(categoryLabel("Bahan baku", "en")).toBe("Raw materials");
+    expect(categoryLabel("Bahan baku", "id")).toBe("Bahan baku");
+    const { incomeStatement, cashFlow } = getStatements(ledger, "quarter", defaultProfile, [], "en");
+    expect(incomeStatement.opex.map((r) => r.label)).toContain("Delivery");
+    expect(cashFlow[0]!.label).toBe("Cash in from customers");
+    const kur = lenders.find((l) => l.name === "KUR Mikro")!;
+    const m = scoreLender(kur, 5000000, "Tambah stok", 12, 2000000, "en");
+    expect(m.eligible).toBe(true);
+    expect(m.factors.map((f) => f.label)).toContain("Repayment capacity");
+    expect(purposeLabel("Tambah stok", "en")).toBe("Restock inventory");
+  });
+
+  it("CSV bahasa Inggris bisa diimpor kembali dengan kategori yang sama", () => {
+    const csv = toCsv(ledger, "en");
+    expect(csv).toContain("date;type;amount;category;description");
+    const { rows, errors } = parseCsv(csv, "en");
+    expect(errors).toEqual([]);
+    expect(rows.map((r) => r.category).sort()).toEqual(ledger.map((t) => t.category).sort());
   });
 });

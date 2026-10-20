@@ -1,4 +1,5 @@
-import { dateInputToIso, expenseCategories, incomeCategories, type Category, type Tx } from "./financials";
+import { categoryLabel, dateInputToIso, expenseCategories, incomeCategories, type Category, type Tx } from "./financials";
+import type { Language } from "./i18n";
 
 /* ---------- Auto-categorisation from the description ---------- */
 const rules: { category: Category; type: Tx["type"]; words: string[] }[] = [
@@ -78,7 +79,8 @@ const expenseWords = ["expense", "pengeluaran", "keluar", "debit", "dr"];
 const allCategories = [...incomeCategories, ...expenseCategories];
 
 /** Columns are matched by header name; without a header the order is tanggal, jenis, jumlah, kategori, keterangan. */
-export function parseCsv(text: string): CsvResult {
+export function parseCsv(text: string, lang: Language = "id"): CsvResult {
+  const L = (en: string, id: string) => (lang === "en" ? en : id);
   const lines = (text.startsWith(BOM) ? text.slice(1) : text).split(/\r?\n/);
   const first = lines.findIndex((l) => l.trim());
   const result: CsvResult = { rows: [], errors: [] };
@@ -91,7 +93,7 @@ export function parseCsv(text: string): CsvResult {
     ? { date: find(headerNames.date), type: find(headerNames.type), amount: find(headerNames.amount), category: find(headerNames.category), title: find(headerNames.title) }
     : { date: 0, type: 1, amount: 2, category: 3, title: 4 };
   if (col.date < 0 || col.amount < 0) {
-    result.errors.push({ line: first + 1, reason: 'Judul kolom harus memuat "tanggal" dan "jumlah".' });
+    result.errors.push({ line: first + 1, reason: L('Column headers must include "date" and "amount".', 'Judul kolom harus memuat "tanggal" dan "jumlah".') });
     return result;
   }
 
@@ -100,16 +102,17 @@ export function parseCsv(text: string): CsvResult {
     const cells = splitLine(lines[i]!, sep);
     const cell = (idx: number) => (idx >= 0 ? (cells[idx] ?? "") : "");
     const date = parseDate(cell(col.date));
-    if (!date) { result.errors.push({ line: i + 1, reason: `Tanggal "${cell(col.date)}" tidak dikenali. Pakai 2026-10-09 atau 09/10/2026.` }); continue; }
+    if (!date) { result.errors.push({ line: i + 1, reason: L(`Date "${cell(col.date)}" not recognised. Use 2026-10-09 or 09/10/2026.`, `Tanggal "${cell(col.date)}" tidak dikenali. Pakai 2026-10-09 atau 09/10/2026.`) }); continue; }
     const amount = parseAmount(cell(col.amount));
-    if (!amount) { result.errors.push({ line: i + 1, reason: `Jumlah "${cell(col.amount)}" bukan angka yang valid.` }); continue; }
+    if (!amount) { result.errors.push({ line: i + 1, reason: L(`Amount "${cell(col.amount)}" is not a valid number.`, `Jumlah "${cell(col.amount)}" bukan angka yang valid.`) }); continue; }
     // Undo the apostrophe toCsv puts before formula-like text.
     const title = cell(col.title).replace(/^'(?=[=+\-@])/, "").slice(0, 80);
     const rawType = cell(col.type).toLowerCase();
     const rawCategory = cell(col.category);
-    const known = allCategories.find((c) => c.toLowerCase() === rawCategory.toLowerCase());
+    // Accepts the stored (Indonesian) name or its English label.
+    const known = allCategories.find((c) => [c, categoryLabel(c, "en")].some((n) => n.toLowerCase() === rawCategory.toLowerCase()));
     const type: Tx["type"] | null = incomeWords.includes(rawType) ? "income" : expenseWords.includes(rawType) ? "expense" : known ? (incomeCategories.includes(known) ? "income" : "expense") : suggestCategory(title, "income") ? "income" : suggestCategory(title, "expense") ? "expense" : null;
-    if (!type) { result.errors.push({ line: i + 1, reason: 'Jenis tidak jelas. Isi kolom jenis dengan "pemasukan" atau "pengeluaran".' }); continue; }
+    if (!type) { result.errors.push({ line: i + 1, reason: L('Unclear type. Fill the type column with "income" or "expense".', 'Jenis tidak jelas. Isi kolom jenis dengan "pemasukan" atau "pengeluaran".') }); continue; }
     const fits = known && (type === "income" ? incomeCategories : expenseCategories).includes(known);
     const category = (fits ? known : null) ?? suggestCategory(`${title} ${rawCategory}`, type) ?? (type === "income" ? "Pemasukan lain" : "Lainnya");
     result.rows.push({ title: title || rawCategory || category, amount, type, category, date: dateInputToIso(date), source: "csv" });
@@ -117,14 +120,22 @@ export function parseCsv(text: string): CsvResult {
   return result;
 }
 
-export const csvTemplate = `tanggal;jenis;jumlah;kategori;keterangan
+export const csvTemplate = (lang: Language = "id") =>
+  lang === "en"
+    ? `date;type;amount;category;description
+09/10/2026;income;320.000;Sales;Morning sweet bread sales
+09/10/2026;expense;150.000;Raw materials;Margarine and instant yeast
+10/10/2026;income;480.000;Sales;Snack boxes for an office meeting
+10/10/2026;expense;45.000;Delivery;Courier fee for ingredients`
+    : `tanggal;jenis;jumlah;kategori;keterangan
 09/10/2026;pemasukan;320.000;Penjualan;Penjualan roti manis pagi
 09/10/2026;pengeluaran;150.000;Bahan baku;Margarin dan ragi instan
 10/10/2026;pemasukan;480.000;Penjualan;Snack box rapat kantor
 10/10/2026;pengeluaran;45.000;Pengiriman;Ongkir kurir bahan baku`;
 
 /** Semicolon-separated so Excel with Indonesian regional settings opens it directly. */
-export function toCsv(txs: Tx[]): string {
+export function toCsv(txs: Tx[], lang: Language = "id"): string {
+  const en = lang === "en";
   // A cell starting with = + - @ (or tab/CR) runs as a formula in Excel and Sheets; a leading
   // apostrophe makes it plain text. Amounts are always positive, so no number is touched.
   const esc = (raw: string) => {
@@ -134,7 +145,8 @@ export function toCsv(txs: Tx[]): string {
   const rows = [...txs].sort((a, b) => a.date.localeCompare(b.date)).map((t) => {
     const d = new Date(t.date);
     const date = `${String(d.getDate()).padStart(2, "0")}/${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
-    return [date, t.type === "income" ? "pemasukan" : "pengeluaran", String(t.amount), t.category, t.title].map(esc).join(";");
+    const type = t.type === "income" ? (en ? "income" : "pemasukan") : en ? "expense" : "pengeluaran";
+    return [date, type, String(t.amount), categoryLabel(t.category, lang), t.title].map(esc).join(";");
   });
-  return `${BOM}tanggal;jenis;jumlah;kategori;keterangan\n${rows.join("\n")}\n`;
+  return `${BOM}${en ? "date;type;amount;category;description" : "tanggal;jenis;jumlah;kategori;keterangan"}\n${rows.join("\n")}\n`;
 }

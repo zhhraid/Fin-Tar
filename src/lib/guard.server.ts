@@ -12,6 +12,13 @@ const DAY = 24 * 60 * MINUTE;
 
 const deny = (error: string, status: number, headers: Record<string, string> = {}) => Response.json({ error }, { status, headers });
 
+/** The language the app is shown in (sent by the client), for messages the server writes. */
+export function requestLang(request: Request): "en" | "id" {
+  const chosen = request.headers.get("x-fintar-lang");
+  if (chosen === "en" || chosen === "id") return chosen;
+  return /^id\b/i.test(request.headers.get("accept-language") ?? "") ? "id" : "en";
+}
+
 const envNumber = (key: string, fallback: number) => {
   const n = Number(process.env[key]);
   return Number.isFinite(n) && n > 0 ? n : fallback;
@@ -73,24 +80,25 @@ export const resetRateLimits = () => buckets.clear();
  * Returns `{ body }` to continue, or `{ response }` to send back as is.
  */
 export async function guardAiRequest(request: Request, opts: { endpoint: "chat" | "scan"; maxBytes: number }): Promise<{ body: unknown; response?: undefined } | { response: Response; body?: undefined }> {
-  if (!sameOrigin(request)) return { response: deny("Permintaan ditolak.", 403) };
+  const L = (en: string, id: string) => (requestLang(request) === "en" ? en : id);
+  if (!sameOrigin(request)) return { response: deny(L("Request refused.", "Permintaan ditolak."), 403) };
 
   const declared = Number(request.headers.get("content-length"));
-  if (declared > opts.maxBytes) return { response: deny("Kiriman terlalu besar.", 413) };
+  if (declared > opts.maxBytes) return { response: deny(L("Upload too large.", "Kiriman terlalu besar."), 413) };
 
   // Scanning costs more than chatting, so it gets a smaller share of the budget.
   const perMinute = envNumber("AI_RATE_PER_MINUTE", 20);
   const perDay = envNumber("AI_RATE_PER_DAY", 300);
   const share = opts.endpoint === "scan" ? 0.4 : 1;
   const wait = spend(`${opts.endpoint}:${clientIp(request)}`, Math.max(1, Math.floor(perMinute * share)), Math.max(1, Math.floor(perDay * share)));
-  if (wait !== null) return { response: deny("Terlalu banyak permintaan ke AI. Coba lagi sebentar.", 429, { "retry-after": String(wait) }) };
+  if (wait !== null) return { response: deny(L("Too many AI requests. Please try again shortly.", "Terlalu banyak permintaan ke AI. Coba lagi sebentar."), 429, { "retry-after": String(wait) }) };
 
   const text = await request.text().catch(() => null);
-  if (text === null) return { response: deny("Permintaan tidak valid.", 400) };
-  if (text.length > opts.maxBytes) return { response: deny("Kiriman terlalu besar.", 413) };
+  if (text === null) return { response: deny(L("Invalid request.", "Permintaan tidak valid."), 400) };
+  if (text.length > opts.maxBytes) return { response: deny(L("Upload too large.", "Kiriman terlalu besar."), 413) };
   try {
     return { body: JSON.parse(text) as unknown };
   } catch {
-    return { response: deny("Permintaan tidak valid.", 400) };
+    return { response: deny(L("Invalid request.", "Permintaan tidak valid."), 400) };
   }
 }

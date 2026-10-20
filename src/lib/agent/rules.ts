@@ -1,4 +1,5 @@
-import { rp } from "../financials";
+import { categoryLabel, rp } from "../financials";
+import { lenderName } from "../scoring";
 import { createExecutor } from "./execute";
 import { addDays, type Lang, type Metric, type Snapshot } from "./tools";
 import { intentLabels, type Emit, type Intent } from "./types";
@@ -83,14 +84,20 @@ export function runRuleAgent(question: string, snap: Snapshot, lang: Lang, emit:
       lines.push(L(lang, `No simulated lender fits safely: every installment is above your safe cap of ${rp(opts.safe_installment_cap)}/month. Lower the amount or lengthen the tenor.`, `Tidak ada lembaga simulasi yang aman: semua cicilan di atas batas aman ${rp(opts.safe_installment_cap)}/bulan. Kecilkan jumlah atau perpanjang tenor.`));
       return;
     }
-    lines.push(L(lang, `Best match: **${best.lender}** (score ${best.score}/100), ${rp(best.installment)}/month for ${best.tenor} months, within your safe cap of ${rp(opts.safe_installment_cap)}.`, `Paling cocok: **${best.lender}** (skor ${best.score}/100), ${rp(best.installment)}/bulan selama ${best.tenor} bulan, di bawah batas aman ${rp(opts.safe_installment_cap)}.`));
+    lines.push(L(lang, `Best match: **${lenderName(best.lender, "en")}** (score ${best.score}/100), ${rp(best.installment)}/month for ${best.tenor} months, within your safe cap of ${rp(opts.safe_installment_cap)}.`, `Paling cocok: **${best.lender}** (skor ${best.score}/100), ${rp(best.installment)}/bulan selama ${best.tenor} bulan, di bawah batas aman ${rp(opts.safe_installment_cap)}.`));
     ex.call("propose_financing_application", { lender: best.lender, amount, purpose, tenor_months: best.tenor });
   };
 
   if (intent === "record_transaction") {
     const amount = parseMoney(question)!;
     const type = incomeWord.test(question) ? "income" : "expense";
-    const title = question.replace(/^(tolong\s+)?(catat(kan)?|record|log)\s*:?\s*/i, "").replace(/\s+/g, " ").trim().slice(0, 80) || (type === "income" ? "Pemasukan" : "Pengeluaran");
+    const title =
+      question
+        .replace(/^(tolong\s+)?(catat(kan)?|record|log)\s*:?\s*/i, "")
+        .replace(/\s*(?:rp\.?|idr)\s?[\d.,]+(?:\s?(?:rb|ribu|jt|juta|k|million))?/gi, "") // the amount is shown on its own
+        .replace(/\s+/g, " ")
+        .trim()
+        .slice(0, 80) || L(lang, type === "income" ? "Income" : "Expense", type === "income" ? "Pemasukan" : "Pengeluaran");
     const r = ex.call("propose_transaction", { title, amount, type });
     lines.push(r.ok ? L(lang, `I prepared this ${type} of **${rp(amount)}**. Check the category and tap **Approve** to save it.`, `Aku sudah menyiapkan ${type === "income" ? "pemasukan" : "pengeluaran"} **${rp(amount)}**. Cek kategorinya lalu tekan **Setujui** untuk menyimpan.`) : r.error);
   }
@@ -127,7 +134,7 @@ export function runRuleAgent(question: string, snap: Snapshot, lang: Lang, emit:
       const d = c.outcome.data as Data<{ spikes: { category: string; now: number; before: number; increase_pct: number; savings: number }[]; potential_monthly_savings: number }>;
       const top = d.spikes[0];
       if (top) {
-        lines.push(L(lang, `**${top.category}** rose **${top.increase_pct}%** (${rp(top.before)} → ${rp(top.now)}). Bringing costs that rose back to last month's level saves up to **${rp(d.potential_monthly_savings)}/month**.`, `**${top.category}** naik **${top.increase_pct}%** (${rp(top.before)} → ${rp(top.now)}). Mengembalikan biaya yang naik ke level bulan lalu bisa menghemat sampai **${rp(d.potential_monthly_savings)}/bulan**.`));
+        lines.push(L(lang, `**${categoryLabel(top.category, "en")}** rose **${top.increase_pct}%** (${rp(top.before)} → ${rp(top.now)}). Bringing costs that rose back to last month's level saves up to **${rp(d.potential_monthly_savings)}/month**.`, `**${top.category}** naik **${top.increase_pct}%** (${rp(top.before)} → ${rp(top.now)}). Mengembalikan biaya yang naik ke level bulan lalu bisa menghemat sampai **${rp(d.potential_monthly_savings)}/bulan**.`));
         const f = ex.call("find_transactions", { category: top.category, days: 30 });
         if (f.ok) lines.push(L(lang, `The ${(f.outcome.data as unknown[]).length} transactions behind it are listed as sources.`, `${(f.outcome.data as unknown[]).length} transaksi penyebabnya tercantum sebagai sumber.`));
       } else lines.push(L(lang, "No cost category rose 15% or more compared with last month. 👍", "Tidak ada biaya yang naik 15% atau lebih dibanding bulan lalu. 👍"));

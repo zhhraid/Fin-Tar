@@ -93,7 +93,7 @@ Full self-assessment: [docs/SECURITY-SELF-ASSESSMENT.md](SECURITY-SELF-ASSESSMEN
 ## 6. Testing and evaluation
 
 ```sh
-npm test               # 83 tests: agent scenarios, safe execution, model loop (mocked), security, PIN, finance logic, UI flows
+npm test               # 86 tests: agent scenarios, safe execution, model loop (mocked), security, PIN, finance logic, UI flows
 npm run agent:eval     # runs the 10 agent scenarios and writes docs/evidence/agent-scenarios.md
 npx tsc --noEmit
 ```

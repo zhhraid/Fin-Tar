@@ -1,6 +1,6 @@
 import { AiError, aiProvider, imageToJson } from "./ai.server";
 import { authorizeAi } from "./auth.server";
-import { guardAiRequest } from "./guard.server";
+import { guardAiRequest, requestLang } from "./guard.server";
 import { expenseCategories, type Category } from "./financials";
 
 export type ScanResult = {
@@ -47,14 +47,14 @@ const SCHEMA = {
 };
 
 // Shown when no AI key is configured, so the confirm-and-edit flow can still be demonstrated.
-const demoResult = (): ScanResult => ({
-  merchant: "Toko Bahan Kue Sejahtera",
+const demoResult = (lang: "en" | "id"): ScanResult => ({
+  merchant: lang === "en" ? "Sejahtera Baking Supplies" : "Toko Bahan Kue Sejahtera",
   date: new Date().toISOString().slice(0, 10),
   items: [
-    { name: "Tepung terigu 5 kg", qty: 2, price: 136000, unsure: false },
-    { name: "Telur ayam 1 kg", qty: 3, price: 87000, unsure: false },
-    { name: "Mentega 500 g", qty: 2, price: 58000, unsure: true },
-    { name: "Gula pasir 1 kg", qty: 2, price: 36000, unsure: false },
+    { name: lang === "en" ? "Wheat flour 5 kg" : "Tepung terigu 5 kg", qty: 2, price: 136000, unsure: false },
+    { name: lang === "en" ? "Chicken eggs 1 kg" : "Telur ayam 1 kg", qty: 3, price: 87000, unsure: false },
+    { name: lang === "en" ? "Butter 500 g" : "Mentega 500 g", qty: 2, price: 58000, unsure: true },
+    { name: lang === "en" ? "Granulated sugar 1 kg" : "Gula pasir 1 kg", qty: 2, price: 36000, unsure: false },
   ],
   total: 317000,
   category: "Bahan baku",
@@ -68,6 +68,8 @@ export async function handleScan(request: Request) {
   if (guarded.response) return guarded.response;
   const denied = await authorizeAi(request);
   if (denied) return denied;
+  const lang = requestLang(request);
+  const L = (en: string, id: string) => (lang === "en" ? en : id);
 
   let image: string;
   try {
@@ -75,11 +77,11 @@ export async function handleScan(request: Request) {
     if (typeof body.image !== "string" || !body.image.startsWith("data:image/")) throw new Error();
     image = body.image;
   } catch {
-    return Response.json({ error: "Foto struk tidak valid." }, { status: 400 });
+    return Response.json({ error: L("Invalid receipt photo.", "Foto struk tidak valid.") }, { status: 400 });
   }
-  if (image.length > MAX_IMAGE_CHARS) return Response.json({ error: "Foto terlalu besar. Coba foto ulang." }, { status: 413 });
+  if (image.length > MAX_IMAGE_CHARS) return Response.json({ error: L("Photo too large. Please retake it.", "Foto terlalu besar. Coba foto ulang.") }, { status: 413 });
 
-  if (aiProvider() === "demo") return Response.json(demoResult());
+  if (aiProvider() === "demo") return Response.json(demoResult(lang));
 
   try {
     const parsed = (await imageToJson(PROMPT, image, SCHEMA, request.signal)) as Partial<ScanResult>;
@@ -94,7 +96,7 @@ export async function handleScan(request: Request) {
     const category = expenseCategories.find((c) => c === parsed.category) ?? "Bahan baku";
     return Response.json({ merchant: String(parsed.merchant ?? "").slice(0, 60), date, items, total, category } satisfies ScanResult);
   } catch (error) {
-    if (error instanceof AiError) return Response.json({ error: error.message }, { status: error.status });
-    return Response.json({ error: "Struk tidak bisa dibaca. Coba foto lebih jelas." }, { status: 500 });
+    if (error instanceof AiError) return Response.json({ error: error.text(lang) }, { status: error.status });
+    return Response.json({ error: L("The receipt could not be read. Try a clearer photo.", "Struk tidak bisa dibaca. Coba foto lebih jelas.") }, { status: 500 });
   }
 }

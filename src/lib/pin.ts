@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { currentAccount } from "./cloud";
 import { logActivity } from "./financials";
+import { getLanguage } from "./i18n";
 
 // A 6-digit PIN asked before financial data leaves the app (PDF, Excel/CSV, proposal, log)
 // and before "delete all my data", the way banking apps ask before a transaction.
@@ -57,7 +58,7 @@ export function pinProblem(pin: string): "format" | "repeat" | "sequence" | null
 }
 
 export async function setPin(pin: string) {
-  if (pinProblem(pin)) throw new Error("PIN tidak memenuhi syarat");
+  if (pinProblem(pin)) throw new Error(getLanguage() === "en" ? "PIN does not meet the rules" : "PIN tidak memenuhi syarat");
   const salt = crypto.getRandomValues(new Uint8Array(16));
   write(pinKey(), { v: 1, salt: hex(salt), hash: await derive(pin, salt) } satisfies Saved);
   write(triesKey(), null);
@@ -85,7 +86,7 @@ export async function checkPin(pin: string): Promise<{ result: "ok" } | { result
   const failed = (read<Tries>(triesKey())?.failed ?? 0) + 1;
   if (failed >= MAX_TRIES) {
     write(triesKey(), { failed: 0, lockedUntil: Date.now() + LOCK_MS });
-    logActivity({ tool: "pin_locked", tier: "T2", status: "blocked", summary: `PIN salah ${MAX_TRIES} kali; ekspor dan hapus data dikunci 5 menit` });
+    logActivity({ tool: "pin_locked", tier: "T2", status: "blocked", summary: getLanguage() === "en" ? `Wrong PIN ${MAX_TRIES} times; exports and data deletion locked for 5 minutes` : `PIN salah ${MAX_TRIES} kali; ekspor dan hapus data dikunci 5 menit` });
     return { result: "locked", ms: LOCK_MS };
   }
   write(triesKey(), { failed, lockedUntil: 0 });

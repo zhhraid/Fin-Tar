@@ -1,4 +1,5 @@
 import { cloudEnabled, supabaseAnonKey, supabaseUrl } from "./env";
+import { requestLang } from "./guard.server";
 
 // Guards the AI endpoints. In cloud mode a request must come from a signed-in user
 // whose latest AI-processing consent is "granted". In device mode there are no
@@ -9,8 +10,9 @@ const deny = (error: string, status: number) => Response.json({ error }, { statu
 /** Returns null when the request may proceed, otherwise the response to send back. */
 export async function authorizeAi(request: Request): Promise<Response | null> {
   if (!cloudEnabled) return null;
+  const L = (en: string, id: string) => (requestLang(request) === "en" ? en : id);
   const token = /^Bearer (.+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
-  if (!token) return deny("Masuk dulu untuk memakai fitur AI.", 401);
+  if (!token) return deny(L("Sign in to use the AI features.", "Masuk dulu untuk memakai fitur AI."), 401);
   const headers = { apikey: supabaseAnonKey, authorization: `Bearer ${token}` };
   // One query answers both questions: Supabase rejects an invalid or expired token with 401,
   // and Row Level Security limits the rows to the caller's own consent history.
@@ -19,12 +21,12 @@ export async function authorizeAi(request: Request): Promise<Response | null> {
   const get = () => fetch(url, { headers, signal: AbortSignal.timeout(6000) });
   try {
     const res = await get().catch(get);
-    if (res.status === 401 || res.status === 403) return deny("Sesi berakhir. Silakan masuk lagi.", 401);
-    if (!res.ok) return deny("Tidak bisa memeriksa akun. Coba lagi.", 503);
+    if (res.status === 401 || res.status === 403) return deny(L("Session expired. Please sign in again.", "Sesi berakhir. Silakan masuk lagi."), 401);
+    if (!res.ok) return deny(L("Could not check your account. Please try again.", "Tidak bisa memeriksa akun. Coba lagi."), 503);
     const rows = (await res.json()) as { granted?: boolean }[];
-    if (rows[0]?.granted !== true) return deny("Izin pemrosesan AI belum diberikan.", 403);
+    if (rows[0]?.granted !== true) return deny(L("AI processing consent has not been given.", "Izin pemrosesan AI belum diberikan."), 403);
     return null;
   } catch {
-    return deny("Tidak bisa memeriksa akun. Coba lagi.", 503);
+    return deny(L("Could not check your account. Please try again.", "Tidak bisa memeriksa akun. Coba lagi."), 503);
   }
 }

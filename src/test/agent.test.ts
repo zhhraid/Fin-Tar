@@ -88,7 +88,7 @@ const scenarios: Scenario[] = [
       expect(r.intent).toBe("cost_analysis");
       expect(r.metrics["savings_month"]).toBeGreaterThan(0);
       expect(r.tools).toContain("find_transactions");
-      expect(r.answer).toMatch(/Pengiriman/);
+      expect(r.answer).toMatch(/Delivery/);
     },
   },
   {
