@@ -2,6 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { handleAgent } from "@/lib/agent.server";
+import { classifyIntent } from "@/lib/agent/rules";
 import { runTool, type Snapshot } from "@/lib/agent/tools";
 import type { AgentEvent } from "@/lib/agent/types";
 import { dateInputValue, defaultProfile, type Planned, type Tx } from "@/lib/financials";
@@ -87,7 +88,7 @@ const scenarios: Scenario[] = [
       expect(r.intent).toBe("cost_analysis");
       expect(r.metrics["savings_month"]).toBeGreaterThan(0);
       expect(r.tools).toContain("find_transactions");
-      expect(r.answer).toMatch(/Pengiriman/);
+      expect(r.answer).toMatch(/Delivery/);
     },
   },
   {
@@ -206,6 +207,12 @@ describe("eksekusi aman", () => {
     const r = runTool("propose_financing_application", { lender: "Pinjaman Digital Produktif", amount: 20_000_000, tenor_months: 6 }, snap(), "en");
     expect(r).toMatchObject({ ok: false });
     expect(!r.ok && r.error).toMatch(/Blocked/);
+  });
+
+  it("mengenali permintaan dana tanpa kata 'modal' atau 'loan'", () => {
+    expect(classifyIntent("I need Rp5 million for stock. What are my options?")).toBe("financing");
+    expect(classifyIntent("Aku butuh 5 juta buat stok")).toBe("financing");
+    expect(classifyIntent("Where can I cut costs?")).toBe("cost_analysis");
   });
 
   it("tindakan T2 hanya menjadi usulan, data tidak berubah", () => {

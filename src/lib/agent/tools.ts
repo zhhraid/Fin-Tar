@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { suggestCategory } from "../csv";
-import { dateInputValue, expenseCategories, forecastCash, getCreditProfile, incomeCategories, openPlanned, rollingDays, rp, summarize, type Category, type Planned, type Profile, type Tx } from "../financials";
-import { healthyCap, lenders, rankLenders } from "../scoring";
+import { categoryLabel, dateInputValue, expenseCategories, forecastCash, getCreditProfile, incomeCategories, openPlanned, rollingDays, rp, summarize, type Category, type Planned, type Profile, type Tx } from "../financials";
+import { healthyCap, lenderName, lenders, rankLenders } from "../scoring";
 
 // The FinTar agent's tools. Every tool has a permission tier (PRD section 8):
 //   T0 read     runs automatically
@@ -146,7 +146,7 @@ export const tools = [
         .sort((a, b) => b.savings - a.savings);
       const savings = spikes.reduce((sum, s) => sum + s.savings, 0);
       return {
-        summary: spikes.length ? L(lang, `${spikes.map((s) => `${s.category} +${s.increase_pct}%`).join(", ")}; up to ${rp(savings)}/month back`, `${spikes.map((s) => `${s.category} +${s.increase_pct}%`).join(", ")}; bisa hemat sampai ${rp(savings)}/bulan`) : L(lang, "No category rose 15% or more", "Tidak ada biaya yang naik 15% atau lebih"),
+        summary: spikes.length ? L(lang, `${spikes.map((s) => `${categoryLabel(s.category, lang)} +${s.increase_pct}%`).join(", ")}; up to ${rp(savings)}/month back`, `${spikes.map((s) => `${s.category} +${s.increase_pct}%`).join(", ")}; bisa hemat sampai ${rp(savings)}/bulan`) : L(lang, "No category rose 15% or more", "Tidak ada biaya yang naik 15% atau lebih"),
         data: { spikes, potential_monthly_savings: savings, reason: "Savings = this month's amount minus the previous month's, per category that rose at least 15%." },
         metrics: [{ key: "savings_month", label: L(lang, "Potential savings", "Potensi hemat"), value: L(lang, `${rp(savings)}/mo`, `${rp(savings)}/bln`), raw: savings, good: savings > 0 }],
       };
@@ -181,11 +181,11 @@ export const tools = [
     jsonSchema: { type: "object", properties: { amount: { type: "number", description: "Rupiah" }, purpose: { type: "string", enum: [...purposes] }, tenor_months: { type: "integer" } }, required: ["amount"] },
     run: (snap, { amount, purpose, tenor_months }, lang) => {
       const profit = getCreditProfile(snap.ledger).monthlyProfit;
-      const ranked = rankLenders(amount, purpose, tenor_months, profit).slice(0, 3);
+      const ranked = rankLenders(amount, purpose, tenor_months, profit, lang).slice(0, 3);
       const best = ranked.find((m) => m.eligible && !m.risk);
       const cap = healthyCap(profit);
       return {
-        summary: best ? L(lang, `Best: ${best.lender.name}, score ${best.score}, ${rp(best.installment)}/mo`, `Terbaik: ${best.lender.name}, skor ${best.score}, ${rp(best.installment)}/bln`) : L(lang, "No option fits safely", "Tidak ada opsi yang aman"),
+        summary: best ? L(lang, `Best: ${lenderName(best.lender.name, lang)}, score ${best.score}, ${rp(best.installment)}/mo`, `Terbaik: ${best.lender.name}, skor ${best.score}, ${rp(best.installment)}/bln`) : L(lang, "No option fits safely", "Tidak ada opsi yang aman"),
         data: { simulated: true, avg_monthly_profit: Math.round(profit), safe_installment_cap: cap, options: ranked.map((m) => ({ lender: m.lender.name, eligible: m.eligible, blocker: m.blocker, score: m.score, tenor: m.tenor, installment: m.installment, risk_warning: m.risk, reasons: m.factors.map((f) => `${f.label}: ${f.reason}`) })) },
         metrics: best ? [{ key: "installment_share", label: L(lang, "Installment / profit", "Cicilan / laba"), value: profit > 0 ? `${Math.round((best.installment / profit) * 100)}%` : "-", raw: profit > 0 ? best.installment / profit : 1, good: best.installment <= cap }] : [],
       };
@@ -203,7 +203,7 @@ export const tools = [
       const date = input.date && input.date <= today ? input.date : today;
       const fits = input.category && (input.type === "income" ? incomeCategories : expenseCategories).includes(input.category);
       const category = (fits ? input.category : null) ?? suggestCategory(input.title, input.type) ?? (input.type === "income" ? "Penjualan" : "Lainnya");
-      const proposal: Proposal = { id: proposalId(), kind: "add_transaction", title: L(lang, `Record ${input.type}: ${input.title} ${rp(input.amount)}`, `Catat ${input.type === "income" ? "pemasukan" : "pengeluaran"}: ${input.title} ${rp(input.amount)}`), why: L(lang, `Category ${category}, dated ${date}.`, `Kategori ${category}, tanggal ${date}.`), tx: { title: input.title, amount: input.amount, type: input.type, category, date } };
+      const proposal: Proposal = { id: proposalId(), kind: "add_transaction", title: L(lang, `Record ${input.type}: ${input.title} ${rp(input.amount)}`, `Catat ${input.type === "income" ? "pemasukan" : "pengeluaran"}: ${input.title} ${rp(input.amount)}`), why: L(lang, `Category ${categoryLabel(category, lang)}, dated ${date}.`, `Kategori ${category}, tanggal ${date}.`), tx: { title: input.title, amount: input.amount, type: input.type, category, date } };
       return { summary: L(lang, "Waiting for your approval", "Menunggu persetujuanmu"), data: { status: "pending_user_approval", proposal_id: proposal.id }, proposal };
     },
   }),
@@ -247,10 +247,10 @@ export const tools = [
     jsonSchema: { type: "object", properties: { lender: { type: "string" }, amount: { type: "number" }, purpose: { type: "string", enum: [...purposes] }, tenor_months: { type: "integer" } }, required: ["lender", "amount", "tenor_months"] },
     run: (snap, { lender, amount, purpose, tenor_months }, lang) => {
       if (!lenders.some((l) => l.name === lender)) throw new ToolError(L(lang, "Unknown lender; call match_financing first", "Lembaga tidak dikenal; jalankan match_financing dulu"));
-      const match = rankLenders(amount, purpose, tenor_months, getCreditProfile(snap.ledger).monthlyProfit).find((m) => m.lender.name === lender)!;
+      const match = rankLenders(amount, purpose, tenor_months, getCreditProfile(snap.ledger).monthlyProfit, lang).find((m) => m.lender.name === lender)!;
       // Safe execution: the agent cannot propose an option that fails the affordability rule.
       if (!match.eligible || match.risk) throw new ToolError(L(lang, `Blocked: ${match.blocker ?? "installment above 30% of monthly profit"}`, `Diblokir: ${match.blocker ?? "cicilan di atas 30% laba bulanan"}`));
-      const proposal: Proposal = { id: proposalId(), kind: "financing_application", title: L(lang, `Apply to ${lender} (simulated): ${rp(amount)}, ${match.tenor} months`, `Ajukan ke ${lender} (simulasi): ${rp(amount)}, ${match.tenor} bulan`), why: L(lang, `Score ${match.score}/100, installment ${rp(match.installment)}/month. Sandbox only; real decisions belong to licensed lenders.`, `Skor ${match.score}/100, cicilan ${rp(match.installment)}/bulan. Hanya simulasi; keputusan nyata ada di lembaga berizin.`), application: { lender, amount, purpose, tenor: match.tenor, installment: match.installment } };
+      const proposal: Proposal = { id: proposalId(), kind: "financing_application", title: L(lang, `Apply to ${lenderName(lender, lang)} (simulated): ${rp(amount)}, ${match.tenor} months`, `Ajukan ke ${lender} (simulasi): ${rp(amount)}, ${match.tenor} bulan`), why: L(lang, `Score ${match.score}/100, installment ${rp(match.installment)}/month. Sandbox only; real decisions belong to licensed lenders.`, `Skor ${match.score}/100, cicilan ${rp(match.installment)}/bulan. Hanya simulasi; keputusan nyata ada di lembaga berizin.`), application: { lender, amount, purpose, tenor: match.tenor, installment: match.installment } };
       return { summary: L(lang, "Waiting for approval + PIN", "Menunggu persetujuan + PIN"), data: { status: "pending_user_approval", proposal_id: proposal.id, score: match.score }, proposal };
     },
   }),

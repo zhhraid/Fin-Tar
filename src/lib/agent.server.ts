@@ -76,8 +76,8 @@ export async function handleAgent(request: Request) {
 
   const body = (guarded.body ?? {}) as { question?: unknown; history?: unknown; ledger?: unknown; profile?: unknown; planned?: unknown; lang?: unknown };
   const question = typeof body.question === "string" ? body.question.trim().slice(0, 1000) : "";
-  if (!question) return Response.json({ error: "Permintaan tidak valid." }, { status: 400 });
   const lang: Lang = body.lang === "en" ? "en" : "id";
+  if (!question) return Response.json({ error: lang === "en" ? "Invalid request." : "Permintaan tidak valid." }, { status: 400 });
   const history = (Array.isArray(body.history) ? body.history : [])
     .slice(-8)
     .flatMap((h) => (h && typeof h === "object" && (h.role === "user" || h.role === "assistant") && typeof h.text === "string" && h.text.trim() ? [{ role: h.role as "user" | "assistant", text: String(h.text).slice(0, 2000) }] : []));
@@ -111,7 +111,7 @@ export async function handleAgent(request: Request) {
           if (request.signal.aborted) return;
           console.error("[agent]", e);
           // The task still gets done: the rule-based agent takes over with the same tools.
-          emit({ type: "notice", text: e instanceof AiError ? `${e.message} ${lang === "en" ? "Switched to the built-in agent." : "Beralih ke agen bawaan."}` : lang === "en" ? "AI unavailable; switched to the built-in agent." : "AI tidak tersedia; beralih ke agen bawaan." });
+          emit({ type: "notice", text: e instanceof AiError ? `${e.text(lang)} ${lang === "en" ? "Switched to the built-in agent." : "Beralih ke agen bawaan."}` : lang === "en" ? "AI unavailable; switched to the built-in agent." : "AI tidak tersedia; beralih ke agen bawaan." });
           runRuleAgent(question, snap, lang, emit);
           emit({ type: "done", mode: "rules" });
         }

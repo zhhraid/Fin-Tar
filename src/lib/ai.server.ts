@@ -11,8 +11,12 @@ export type ChatTurn = { role: "user" | "assistant"; text: string };
 
 /** An error whose message is safe to show to the user. */
 export class AiError extends Error {
-  constructor(message: string, readonly status = 502) {
+  /** `message` is Indonesian; `en` is the same message in English. */
+  constructor(message: string, readonly status = 502, readonly en = message) {
     super(message);
+  }
+  text(lang: "en" | "id") {
+    return lang === "en" ? this.en : this.message;
   }
 }
 
@@ -38,11 +42,11 @@ const claudeExtras = (model: string, effort: "low" | "medium") => ({
 
 function claudeError(e: unknown): AiError {
   if (e instanceof AiError) return e;
-  if (e instanceof Anthropic.AuthenticationError) return new AiError("Kunci API Claude tidak valid. Periksa ANTHROPIC_API_KEY.", 500);
-  if (e instanceof Anthropic.PermissionDeniedError) return new AiError("Kunci API Claude tidak punya akses ke model ini.", 500);
-  if (e instanceof Anthropic.NotFoundError) return new AiError(`Model Claude "${claudeModel()}" tidak ditemukan. Periksa ANTHROPIC_MODEL.`, 500);
-  if (e instanceof Anthropic.RateLimitError) return new AiError("AI sedang ramai. Coba lagi sebentar.", 429);
-  if (e instanceof Anthropic.APIError) return new AiError("AI gagal menjawab. Coba lagi.", 502);
+  if (e instanceof Anthropic.AuthenticationError) return new AiError("Kunci API Claude tidak valid. Periksa ANTHROPIC_API_KEY.", 500, "Invalid Claude API key. Check ANTHROPIC_API_KEY.");
+  if (e instanceof Anthropic.PermissionDeniedError) return new AiError("Kunci API Claude tidak punya akses ke model ini.", 500, "The Claude API key has no access to this model.");
+  if (e instanceof Anthropic.NotFoundError) return new AiError(`Model Claude "${claudeModel()}" tidak ditemukan. Periksa ANTHROPIC_MODEL.`, 500, `Claude model "${claudeModel()}" not found. Check ANTHROPIC_MODEL.`);
+  if (e instanceof Anthropic.RateLimitError) return new AiError("AI sedang ramai. Coba lagi sebentar.", 429, "The AI is busy. Please try again shortly.");
+  if (e instanceof Anthropic.APIError) return new AiError("AI gagal menjawab. Coba lagi.", 502, "The AI failed to answer. Please try again.");
   return new AiError("Tidak bisa menghubungi AI. Periksa koneksi server.", 502);
 }
 
@@ -98,7 +102,7 @@ const RETRY_WAITS_MS = [700, 1800];
 const HEADERS_TIMEOUT_MS = 45000; // per attempt, until the model starts answering (covers a slow image upload)
 
 async function geminiFetch(method: string, body: unknown, signal: AbortSignal): Promise<Response> {
-  let last = new AiError("AI sedang sangat ramai. Coba lagi sebentar.", 503);
+  let last = new AiError("AI sedang sangat ramai. Coba lagi sebentar.", 503, "The AI is very busy. Please try again shortly.");
   for (const model of geminiModels()) {
     for (let attempt = 0; attempt <= RETRY_WAITS_MS.length; attempt++) {
       if (attempt) await new Promise((r) => setTimeout(r, RETRY_WAITS_MS[attempt - 1]));
@@ -115,9 +119,9 @@ async function geminiFetch(method: string, body: unknown, signal: AbortSignal): 
           signal: attemptAbort.signal,
         });
       } catch {
-        if (signal.aborted) throw new AiError("Permintaan dibatalkan.", 499);
+        if (signal.aborted) throw new AiError("Permintaan dibatalkan.", 499, "Request cancelled.");
         console.error(`[ai] Gemini ${model}: ${attemptAbort.signal.aborted ? "tidak menjawab dalam batas waktu" : "koneksi gagal"}`);
-        last = new AiError("Tidak bisa menghubungi AI. Periksa koneksi lalu coba lagi.", 502);
+        last = new AiError("Tidak bisa menghubungi AI. Periksa koneksi lalu coba lagi.", 502, "Could not reach the AI. Check your connection and try again.");
         continue;
       } finally {
         clearTimeout(timer);
@@ -127,14 +131,14 @@ async function geminiFetch(method: string, body: unknown, signal: AbortSignal): 
       console.error(`[ai] Gemini ${model} menjawab ${res.status}: ${detail}`);
       if (res.status === 500 || res.status === 503) continue; // temporary: retry this model
       if (res.status === 429) {
-        last = new AiError("Kuota AI habis untuk saat ini. Coba lagi beberapa menit lagi.", 429);
+        last = new AiError("Kuota AI habis untuk saat ini. Coba lagi beberapa menit lagi.", 429, "AI quota used up for now. Try again in a few minutes.");
         break; // this model's quota is used up: try the fallback model
       }
-      if (res.status === 404) throw new AiError(`Model Gemini "${model}" tidak ditemukan. Periksa GEMINI_MODEL.`, 500);
-      if (res.status === 401 || res.status === 403) throw new AiError("Kunci API Gemini tidak valid. Periksa GEMINI_API_KEY.", 500);
+      if (res.status === 404) throw new AiError(`Model Gemini "${model}" tidak ditemukan. Periksa GEMINI_MODEL.`, 500, `Gemini model "${model}" not found. Check GEMINI_MODEL.`);
+      if (res.status === 401 || res.status === 403) throw new AiError("Kunci API Gemini tidak valid. Periksa GEMINI_API_KEY.", 500, "Invalid Gemini API key. Check GEMINI_API_KEY.");
       // 400 covers both a malformed key and input the model cannot process (e.g. a broken image).
-      if (res.status === 400) throw new AiError(/API key/i.test(detail) ? "Kunci API Gemini tidak valid. Periksa GEMINI_API_KEY." : "AI tidak bisa memproses kiriman ini. Coba foto ulang atau ubah pertanyaannya.", /API key/i.test(detail) ? 500 : 422);
-      throw new AiError("AI gagal menjawab. Coba lagi.", 502);
+      if (res.status === 400) throw new AiError(/API key/i.test(detail) ? "Kunci API Gemini tidak valid. Periksa GEMINI_API_KEY." : "AI tidak bisa memproses kiriman ini. Coba foto ulang atau ubah pertanyaannya.", /API key/i.test(detail) ? 500 : 422, /API key/i.test(detail) ? "Invalid Gemini API key. Check GEMINI_API_KEY." : "The AI could not process this. Try another photo or rephrase the question.");
+      throw new AiError("AI gagal menjawab. Coba lagi.", 502, "The AI failed to answer. Please try again.");
     }
   }
   throw last;
@@ -185,13 +189,13 @@ export function streamChat(system: string, turns: ChatTurn[], signal: AbortSigna
 /** Sends one image with a prompt and returns the model's JSON answer. */
 export async function imageToJson(prompt: string, dataUrl: string, schema: Record<string, unknown>, signal: AbortSignal): Promise<unknown> {
   const match = /^data:(image\/(?:jpeg|png|webp|gif));base64,(.+)$/.exec(dataUrl);
-  if (!match) throw new AiError("Format foto tidak didukung. Pakai JPG atau PNG.", 400);
+  if (!match) throw new AiError("Format foto tidak didukung. Pakai JPG atau PNG.", 400, "Photo format not supported. Use JPG or PNG.");
   const image = { mime: match[1]!, data: match[2]! };
   try {
     return aiProvider() === "claude" ? await claudeJson(prompt, image, schema, signal) : await geminiJson(prompt, image, signal);
   } catch (e) {
     if (e instanceof AiError) throw e;
-    throw new AiError("Jawaban AI tidak bisa dibaca. Coba foto ulang.", 502);
+    throw new AiError("Jawaban AI tidak bisa dibaca. Coba foto ulang.", 502, "The AI answer could not be read. Try another photo.");
   }
 }
 

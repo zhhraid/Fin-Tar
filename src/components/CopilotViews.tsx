@@ -6,7 +6,7 @@ import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
 import { exportProposalPdf } from "@/lib/export";
 import { withPin } from "@/lib/pin";
 import { addPlanned, cancelInsurance, chooseInsurance, clearLoan, currentInsurance, dateInputValue, daysUntil, forecastCash, getCreditProfile, getInsights, loanStage, loanStages, logActivity, openPlanned, payableTotal, removePlanned, rp, settlePlanned, shortDate, submitLoan, updatePlanned, useActivity, useLedger, useLoanApplication, usePlanned, useProfile, type Insight, type InsuranceChoice, type LoanApplication, type Planned } from "@/lib/financials";
-import { healthyCap, rankLenders, type LenderMatch } from "@/lib/scoring";
+import { healthyCap, lenderName, lenderText, purposeKeys, purposeLabel, rankLenders, type LenderMatch } from "@/lib/scoring";
 import { useTranslation } from "@/lib/i18n";
 
 function Header({ eyebrow, title, onBack }: { eyebrow: string; title: string; onBack: () => void }) {
@@ -38,7 +38,7 @@ type Draft = Omit<LoanApplication, "id" | "submittedAt">;
 export function LoanView({ onBack }: { onBack: () => void }) {
   const { t, lang } = useTranslation();
   const [amount, setAmount] = useState(5000000);
-  const [purpose, setPurpose] = useState(t("purposeStock"));
+  const [purpose, setPurpose] = useState(purposeKeys[0]!);
   const [tenor, setTenor] = useState(12);
   const [draft, setDraft] = useState<Draft | null>(null);
   const application = useLoanApplication();
@@ -48,14 +48,13 @@ export function LoanView({ onBack }: { onBack: () => void }) {
   if (application) return <LoanStatus application={application} onBack={onBack} />;
   if (draft) return <LoanProposal draft={draft} onBack={() => setDraft(null)} />;
 
-  const matches = rankLenders(amount, purpose, tenor, credit.monthlyProfit);
+  const matches = rankLenders(amount, purpose, tenor, credit.monthlyProfit, lang);
   const draftFor = (m: LenderMatch) => {
     const next = { lender: m.lender.name, amount, purpose, tenor: m.tenor, installment: m.installment };
-    logActivity({ tool: "draft_proposal", tier: "T1", status: "completed", summary: `Draf proposal ${rp(amount)} untuk ${m.lender.name} (skor ${m.score})`, detail: { ...next, score: m.score } });
+    logActivity({ tool: "draft_proposal", tier: "T1", status: "completed", summary: lang === "en" ? `Draft proposal ${rp(amount)} for ${lenderName(m.lender.name, lang)} (score ${m.score})` : `Draf proposal ${rp(amount)} untuk ${m.lender.name} (skor ${m.score})`, detail: { ...next, score: m.score } });
     setDraft(next);
   };
 
-  const purposeOptions = [t("purposeStock"), t("purposeEquipment"), t("purposeRenovation")];
 
   return (
     <main className="pb-6">
@@ -71,7 +70,7 @@ export function LoanView({ onBack }: { onBack: () => void }) {
         <Label>{t("howMuchCapital")}</Label>
         <Chips options={[5000000, 10000000, 25000000, 50000000]} value={amount} onChange={setAmount} format={(v) => (lang === "en" ? `Rp${v / 1e6}M` : `Rp${v / 1e6} jt`)} />
         <Label>{t("forWhatPurpose")}</Label>
-        <Chips options={purposeOptions} value={purpose} onChange={setPurpose} />
+        <Chips options={purposeKeys} value={purpose} onChange={setPurpose} format={(p) => purposeLabel(p, lang)} />
         <Label>{t("tenorLabel")}</Label>
         <Chips options={[6, 12, 24]} value={tenor} onChange={setTenor} format={(v) => `${v} ${t("monthsCount")}`} />
 
@@ -83,7 +82,7 @@ export function LoanView({ onBack }: { onBack: () => void }) {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-success-soft text-success"><Landmark size={18} /></div>
-                  <div><p className="text-sm font-bold">{m.lender.name}</p><p className="text-[10px] text-muted-foreground">{m.lender.type}</p></div>
+                  <div><p className="text-sm font-bold">{lenderName(m.lender.name, lang)}</p><p className="text-[10px] text-muted-foreground">{lenderText(m.lender, lang).type}</p></div>
                 </div>
                 {m.eligible ? <span className={`shrink-0 rounded-lg px-2 py-1 text-[10px] font-bold ${m.risk ? "bg-danger-soft text-danger" : "bg-primary text-primary-foreground"}`}>{t("scoreLabel")} {m.score}/100</span> : <span className="flex shrink-0 items-center gap-1 text-[10px] font-semibold text-muted-foreground"><Lock size={11} /> {t("ineligibleLabel")}</span>}
               </div>
@@ -93,7 +92,7 @@ export function LoanView({ onBack }: { onBack: () => void }) {
                   <div className="mt-3 grid grid-cols-3 gap-2 text-[10px]">
                     <div><p className="text-muted-foreground">{t("interestLabel")}</p><p className="text-xs font-bold">{Math.round(m.lender.rate * 100)}%{t("perYear")}</p></div>
                     <div><p className="text-muted-foreground">{t("installmentLabel")} × {m.tenor} {t("month")}</p><p className="text-xs font-bold">{rp(m.installment)}</p></div>
-                    <div><p className="text-muted-foreground">{t("disbursementLabel")}</p><p className="text-xs font-bold">{m.lender.daysLabel}</p></div>
+                    <div><p className="text-muted-foreground">{t("disbursementLabel")}</p><p className="text-xs font-bold">{lenderText(m.lender, lang).daysLabel}</p></div>
                   </div>
                   {m.risk && <p className="mt-3 flex items-start gap-1.5 rounded-xl bg-danger-soft px-3 py-2 text-[11px] font-semibold text-danger"><AlertTriangle size={13} className="mt-0.5 shrink-0" /> {t("capWarningText", { cap: rp(m.cap) })}</p>}
                   <p className="mt-3 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">{t("scoreReasons")}</p>
@@ -125,11 +124,11 @@ function LoanProposal({ draft, onBack }: { draft: Draft; onBack: () => void }) {
   const credit = getCreditProfile(ledger);
   const [agree, setAgree] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const pdf = async () => {
     setExporting(true);
     try {
-      await withPin(t("pinForProposal"), `Proposal modal untuk ${draft.lender} diunduh (PDF)`, () => exportProposalPdf(draft, ledger, profile, planned));
+      await withPin(t("pinForProposal"), lang === "en" ? `Financing proposal for ${lenderName(draft.lender, lang)} downloaded (PDF)` : `Proposal modal untuk ${draft.lender} diunduh (PDF)`, () => exportProposalPdf({ ...draft, lender: lenderName(draft.lender, lang), purpose: purposeLabel(draft.purpose, lang) }, ledger, profile, planned, lang));
     } catch {
       toast.error(t("pdfGenError"));
     }
@@ -137,7 +136,7 @@ function LoanProposal({ draft, onBack }: { draft: Draft; onBack: () => void }) {
   };
   return (
     <main className="pb-6">
-      <Header eyebrow={`PROPOSAL • ${draft.lender.toUpperCase()}`} title={t("reviewProposalTitle")} onBack={onBack} />
+      <Header eyebrow={`PROPOSAL • ${lenderName(draft.lender, lang).toUpperCase()}`} title={t("reviewProposalTitle")} onBack={onBack} />
       <SimBanner />
       <div className="px-5">
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{t("proposalAutoFilledDesc")}</p>
@@ -161,7 +160,7 @@ function LoanProposal({ draft, onBack }: { draft: Draft; onBack: () => void }) {
         <section className="mt-3 rounded-3xl border border-primary p-5">
           <h2 className="mb-2 flex items-center gap-2 text-sm font-extrabold"><span className="grid size-7 place-items-center rounded-lg bg-muted text-primary"><Landmark size={15} /></span>{t("appliedLoanCard")}</h2>
           <Fact label={t("amountLabel")} value={rp(draft.amount)} />
-          <Fact label={t("forWhatPurpose")} value={draft.purpose} />
+          <Fact label={t("forWhatPurpose")} value={purposeLabel(draft.purpose, lang)} />
           <Fact label={t("tenorLabel")} value={`${draft.tenor} ${t("monthsCount")}`} />
           <Fact label={t("installmentLabel")} value={rp(draft.installment)} />
           <Fact label={t("portionOfProfit")} value={credit.monthlyProfit > 0 ? `${Math.round((draft.installment / credit.monthlyProfit) * 100)}%` : "-"} />
@@ -171,7 +170,7 @@ function LoanProposal({ draft, onBack }: { draft: Draft; onBack: () => void }) {
 
         <label className="mt-4 flex items-start gap-3 text-xs leading-relaxed">
           <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]" />
-          <span>{t("agreeShareLoanInfo", { lender: draft.lender })}</span>
+          <span>{t("agreeShareLoanInfo", { lender: lenderName(draft.lender, lang) })}</span>
         </label>
         <Button className="mt-4 h-12 w-full" disabled={!agree} onClick={() => submitLoan(draft)}>{t("sendProposalBtn")}</Button>
         <SimNote>{t("simulatedLoanDisclaimer")}</SimNote>
@@ -184,7 +183,8 @@ function LoanStatus({ application, onBack }: { application: LoanApplication; onB
   const [now, setNow] = useState(() => Date.now());
   const { t, lang } = useTranslation();
   const stage = loanStage(application, now);
-  const done = stage === loanStages.length - 1;
+  const stages = loanStages(lang);
+  const done = stage === stages.length - 1;
   useEffect(() => {
     if (done) return;
     const id = window.setInterval(() => setNow(Date.now()), 1000);
@@ -194,17 +194,17 @@ function LoanStatus({ application, onBack }: { application: LoanApplication; onB
   const stageLabels = [t("loanStage1"), t("loanStage2"), t("loanStage3")];
   return (
     <main className="pb-6">
-      <Header eyebrow={t("loanStatusEyebrow")} title={application.lender} onBack={onBack} />
+      <Header eyebrow={t("loanStatusEyebrow")} title={lenderName(application.lender, lang)} onBack={onBack} />
       <SimBanner />
       <div className="px-5">
         <div className="mt-3 rounded-3xl bg-primary p-5 text-primary-foreground">
-          <p className="text-xs opacity-75">{application.purpose}</p>
+          <p className="text-xs opacity-75">{purposeLabel(application.purpose, lang)}</p>
           <p className="mt-1 text-2xl font-bold">{rp(application.amount)}</p>
           <p className="mt-1 text-[11px] opacity-75">{rp(application.installment)} × {application.tenor} {t("month")}</p>
         </div>
 
         <ol className="mt-6 space-y-5">
-          {loanStages.map((s, i) => {
+          {stages.map((s, i) => {
             const state = i < stage || (done && i === stage) ? "done" : i === stage ? "active" : "todo";
             return (
               <li key={s} className={`flex gap-3 ${state === "todo" ? "opacity-40" : ""}`}>
@@ -231,10 +231,10 @@ const risks = [
 ];
 
 const plans = [
-  { name: "Proteksi Toko Dasar", covers: ["fire"], rate: 0.0012, note: "Peralatan dan bangunan toko" },
-  { name: "Proteksi Toko Plus", covers: ["fire", "theft"], rate: 0.002, note: "Termasuk kehilangan stok & uang kas" },
-  { name: "Usaha Aman Lengkap", covers: ["fire", "theft", "biz"], rate: 0.003, note: "Ganti rugi pendapatan saat toko tutup paksa" },
-  { name: "Sehat Karyawan Mikro", covers: ["health"], rate: 0, fixed: 45000, note: "Rawat jalan & inap untuk 1–5 karyawan" },
+  { name: "Proteksi Toko Dasar", covers: ["fire"], rate: 0.0012, note: "Peralatan dan bangunan toko", en: { name: "Basic Shop Protection", note: "Shop equipment and building" } },
+  { name: "Proteksi Toko Plus", covers: ["fire", "theft"], rate: 0.002, note: "Termasuk kehilangan stok & uang kas", en: { name: "Shop Protection Plus", note: "Includes lost stock & cash" } },
+  { name: "Usaha Aman Lengkap", covers: ["fire", "theft", "biz"], rate: 0.003, note: "Ganti rugi pendapatan saat toko tutup paksa", en: { name: "Complete Business Cover", note: "Replaces income when the shop is forced to close" } },
+  { name: "Sehat Karyawan Mikro", covers: ["health"], rate: 0, fixed: 45000, note: "Rawat jalan & inap untuk 1–5 karyawan", en: { name: "Micro Staff Health", note: "Outpatient & inpatient care for 1–5 employees" } },
 ];
 type PlanDraft = Omit<InsuranceChoice, "at"> & { uncovered: string[] };
 
@@ -266,7 +266,7 @@ export function InsuranceView({ onBack }: { onBack: () => void }) {
       const miss = picked.filter((c) => !p.covers.includes(c)).length;
       const premium = p.fixed ?? Math.max(15000, Math.round((assetValue * p.rate) / 1000) * 1000);
       const score = hit === 0 ? 0 : Math.round((hit / (hit + miss)) * 100 - Math.max(0, p.covers.length - hit) * 8);
-      return { ...p, premium, score, hit };
+      return { ...p, premium, score, hit, label: lang === "en" ? p.en.name : p.name, noteText: lang === "en" ? p.en.note : p.note };
     })
     .filter((p) => p.score > 0)
     .sort((a, b) => b.score - a.score);
@@ -299,14 +299,14 @@ export function InsuranceView({ onBack }: { onBack: () => void }) {
           {results.map((p, i) => (
             <div key={p.name} className={`rounded-2xl border p-4 ${i === 0 ? "border-primary" : "border-border"}`}>
               <div className="flex items-start justify-between gap-3">
-                <div className="flex items-center gap-3"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-primary"><ShieldCheck size={18} /></div><div><p className="text-sm font-bold">{p.name}</p><p className="text-[10px] text-muted-foreground">{p.note}</p></div></div>
+                <div className="flex items-center gap-3"><div className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted text-primary"><ShieldCheck size={18} /></div><div><p className="text-sm font-bold">{p.label}</p><p className="text-[10px] text-muted-foreground">{p.noteText}</p></div></div>
                 <span className="shrink-0 rounded-lg bg-primary px-2 py-1 text-[10px] font-bold text-primary-foreground">{p.score}% {t("matchPct")}</span>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">{p.covers.map((c) => <span key={c} className="rounded-md bg-muted px-2 py-0.5 text-[10px] font-semibold">{riskLabel(c)}</span>)}</div>
               <p className="mt-2 text-[11px] text-muted-foreground">{t("coversHitOfPicked", { hit: p.hit, total: picked.length })}</p>
               <div className="mt-3 flex items-end justify-between gap-3">
                 <div><p className="text-[10px] text-muted-foreground">{t("monthlyPremium")}</p><p className="text-base font-extrabold">{rp(p.premium)}</p>{profit > 0 && <p className="text-[10px] text-success">{((p.premium / profit) * 100).toFixed(1)}% {t("fromMonthlyProfit")}</p>}</div>
-                <Button variant={i === 0 ? "default" : "secondary"} className="h-10 shrink-0 px-4 text-xs" onClick={() => setDraft({ name: p.name, premium: p.premium, covers: p.covers, assetValue, uncovered: picked.filter((c) => !p.covers.includes(c)) })}>{t("choosePackageBtn")}</Button>
+                <Button variant={i === 0 ? "default" : "secondary"} className="h-10 shrink-0 px-4 text-xs" onClick={() => setDraft({ name: p.label, premium: p.premium, covers: p.covers, assetValue, uncovered: picked.filter((c) => !p.covers.includes(c)) })}>{t("choosePackageBtn")}</Button>
               </div>
             </div>
           ))}
@@ -472,11 +472,11 @@ function PlannedForm({ initial, onDone }: { initial?: Planned | null; onDone: ()
         {(["debt", "expense"] as const).map((k) => <button key={k} type="button" onClick={() => setKind(k)} className={`rounded-xl border py-2.5 text-xs font-bold ${kind === k ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>{k === "debt" ? t("debtOption") : t("expenseOption")}</button>)}
       </div>
       <Label>{t("obligationDescLabel")}</Label>
-      <input aria-label="Keterangan kewajiban" value={label} maxLength={80} onChange={(e) => setLabel(e.target.value)} className="h-11 w-full rounded-2xl border border-border bg-transparent px-4 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder={kind === "debt" ? t("debtPlaceholder") : t("expensePlaceholder")} />
+      <input aria-label={t("obligationDescLabel")} value={label} maxLength={80} onChange={(e) => setLabel(e.target.value)} className="h-11 w-full rounded-2xl border border-border bg-transparent px-4 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder={kind === "debt" ? t("debtPlaceholder") : t("expensePlaceholder")} />
       <Label>{t("obligationAmountLabel")}</Label>
       <MoneyInput label={t("obligationAmountLabel")} value={amount} onChange={setAmount} />
       <Label>{t("dueDateLabel")}</Label>
-      <DateInput value={due} onChange={setDue} allowFuture />
+      <DateInput label={t("dueDateLabel")} value={due} onChange={setDue} allowFuture />
       <div className="mt-4 grid grid-cols-2 gap-2">
         <Button variant="secondary" className="h-11 text-xs" onClick={onDone}>{t("cancel")}</Button>
         <Button className="h-11 text-xs" disabled={!amount || !due} onClick={save}>{t("save")}</Button>
@@ -493,7 +493,7 @@ export function AlertsView({ onBack, onLoan, onAsk, onEntry }: { onBack: () => v
   const [editingItem, setEditingItem] = useState<Planned | null>(null);
   const { t, lang } = useTranslation();
 
-  const insights = getInsights(ledger, profile, planned);
+  const insights = getInsights(ledger, profile, planned, lang);
   const forecast = forecastCash(ledger, profile, planned);
   const open = openPlanned(planned);
   const isSparse = ledger.length < 5;
@@ -555,7 +555,7 @@ export function AlertsView({ onBack, onLoan, onAsk, onEntry }: { onBack: () => v
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-bold">{o.label}</p>
-                      <p className={`text-[10px] ${d <= 7 ? "font-semibold text-danger" : "text-muted-foreground"}`}>{o.kind === "debt" ? t("supplierDebt") : t("scheduledExpense")} • {shortDate(o.due)} • {d < 0 ? t("overdueDays", { d: -d }) : d === 0 ? t("todayLabel") : t("daysLeft", { d })}</p>
+                      <p className={`text-[10px] ${d <= 7 ? "font-semibold text-danger" : "text-muted-foreground"}`}>{o.kind === "debt" ? t("supplierDebt") : t("scheduledExpense")} • {shortDate(o.due, lang)} • {d < 0 ? t("overdueDays", { d: -d }) : d === 0 ? t("todayLabel") : t("daysLeft", { d })}</p>
                     </div>
                     <p className="shrink-0 text-sm font-bold">{rp(o.amount)}</p>
                   </div>

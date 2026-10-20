@@ -170,12 +170,14 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
   // Measurable value across runs, from the activity log.
   const impact = useMemo(() => {
     const agentRuns = activity.filter((a) => a.tool === "agent_run");
-    const last = agentRuns[0]?.detail?.["metrics"] as Record<string, number> | undefined;
-    const approved = activity.filter((a) => (a.tool.startsWith("agent_") && a.tool !== "agent_run" && a.status === "approved") || (a.tool === "submit_proposal_sandbox")).length;
-    const decided = activity.filter((a) => a.tool.startsWith("agent_") && a.tool !== "agent_run" && a.tier === "T2").length;
+    const metrics = agentRuns.map((a) => a.detail?.["metrics"] as Record<string, number> | undefined);
+    const latest = (key: string) => metrics.find((m) => m?.[key] !== undefined)?.[key]; // newest run that measured it
+    const decisions = activity.filter((a) => (a.tool.startsWith("agent_") && a.tool !== "agent_run" && a.tier === "T2") || a.tool === "submit_proposal_sandbox");
+    const approved = decisions.filter((a) => a.status === "approved").length;
+    const decided = decisions.length;
     const gained = activity.filter((a) => a.tool === "agent_reschedule_payment" && a.status === "approved").reduce((s, a) => s + (Number(a.detail?.["impact"]) || 0), 0);
     const blocked = activity.filter((a) => a.tier === "T3").length;
-    return { runs: agentRuns.length, approved, decided, gained, blocked, savings: last?.["savings_month"], runway: last?.["runway_days"] };
+    return { runs: agentRuns.length, approved, decided, gained, blocked, savings: latest("savings_month"), runway: latest("runway_days") };
   }, [activity]);
 
   const sentPrompt = useRef<string | null>(null);

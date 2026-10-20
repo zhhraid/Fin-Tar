@@ -45,7 +45,7 @@ import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
 import { signOut, startCloud, useAuth } from "@/lib/cloud";
 import { csvTemplate, parseCsv, suggestCategory, type CsvResult } from "@/lib/csv";
 import { exportReportPdf, exportTransactionsCsv } from "@/lib/export";
-import { addTransaction, addTransactions, dateInputToIso, dateInputValue, expenseCategories, getInsights, getStatements, incomeCategories, logActivity, periodRange, periods, removeTransaction, resetLedger, rollingDays, rp, setAiConsent, summarize, updateProfile, updateTransaction, useAiConsent, useLedger, usePlanned, useProfile, type Category, type Period, type PeriodKey, type Tx } from "@/lib/financials";
+import { addTransaction, addTransactions, categoryLabel, dateInputToIso, dateInputValue, expenseCategories, getInsights, getStatements, incomeCategories, logActivity, periodRange, periods, removeTransaction, resetLedger, rollingDays, rp, setAiConsent, summarize, updateProfile, updateTransaction, useAiConsent, useLedger, usePlanned, useProfile, type Category, type Period, type PeriodKey, type Tx } from "@/lib/financials";
 import { setLanguage, useLanguage, useTranslation } from "@/lib/i18n";
 import { useInstallPrompt } from "@/lib/pwa";
 import { AlertCard, AlertsView, InsuranceView, LoanView } from "@/components/CopilotViews";
@@ -161,8 +161,8 @@ function HomeView({ onNavigate, onAdd, onEdit }: { onNavigate: (view: View) => v
   const profile = useProfile();
   const planned = usePlanned();
   const { t, lang } = useTranslation();
-  const { totals, cash } = getStatements(ledger, "month", profile, planned);
-  const insights = getInsights(ledger, profile, planned);
+  const { totals, cash } = getStatements(ledger, "month", profile, planned, lang);
+  const insights = getInsights(ledger, profile, planned, lang);
   const top = insights[0]!;
   const healthStatusMap = {
     danger: { label: t("healthNeedAction"), cls: "bg-danger text-primary-foreground" },
@@ -274,7 +274,7 @@ function HomeView({ onNavigate, onAdd, onEdit }: { onNavigate: (view: View) => v
             </div>
             <div>
               <p className="text-xs font-bold text-white">{t("askFinix")}</p>
-              <p className="text-[10px] text-white/60">AI Financial Copilot</p>
+              <p className="text-[10px] text-white/60">{lang === "en" ? "AI Financial Copilot" : "Kopilot Keuangan AI"}</p>
             </div>
             <ChevronRight className="ml-auto text-white/50 group-hover:text-white transition-colors" size={16} />
           </div>
@@ -332,7 +332,7 @@ function TransactionList({ items, onSelect }: { items: Tx[]; onSelect: (tx: Tx) 
             </div>
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-foreground group-hover:text-primary transition-colors">{item.title}</p>
-              <p className="text-[10px] text-muted-foreground">{item.category} • {new Date(item.date).toLocaleDateString(lang === "en" ? "en-US" : "id-ID", { day: "numeric", month: "short" })}</p>
+              <p className="text-[10px] text-muted-foreground">{categoryLabel(item.category, lang)} • {new Date(item.date).toLocaleDateString(lang === "en" ? "en-US" : "id-ID", { day: "numeric", month: "short" })}</p>
             </div>
           </div>
           <p className={`ml-2 shrink-0 text-xs font-black tabular-nums ${item.type === "income" ? "text-emerald-600" : "text-rose-600"}`}>
@@ -350,8 +350,8 @@ function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }:
   const profile = useProfile();
   const planned = usePlanned();
   const { t, lang } = useTranslation();
-  const { txs, incomeStatement, totals, cashFlow, balanceSheet, cash } = getStatements(ledger, period, profile, planned);
-  const range = periodRange(period);
+  const { txs, incomeStatement, totals, cashFlow, balanceSheet, cash } = getStatements(ledger, period, profile, planned, lang);
+  const range = periodRange(period, new Date(), lang);
   const custom = typeof period !== "string";
   const pct = (n: number) => (totals.revenue ? `${((n / totals.revenue) * 100).toFixed(1)}%` : "0%");
   const totalAssets = balanceSheet.assets.reduce((s, i) => s + i.value, 0);
@@ -381,7 +381,7 @@ function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }:
   const pdf = async () => {
     setExporting(true);
     try {
-      await withPin(t("pinForReportPdf"), `Laporan keuangan ${range.label} diunduh (PDF)`, () => exportReportPdf(ledger, period, profile, planned));
+      await withPin(t("pinForReportPdf"), lang === "en" ? `Financial report ${range.label} downloaded (PDF)` : `Laporan keuangan ${range.label} diunduh (PDF)`, () => exportReportPdf(ledger, period, profile, planned, lang));
     } catch {
       toast.error(t("pdfGenError"));
     }
@@ -416,7 +416,7 @@ function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }:
 
       <div className="mt-2 grid grid-cols-3 gap-2">
         <Button variant="secondary" className="h-10 px-2 text-[11px]" disabled={exporting} onClick={pdf}>{exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} {t("pdfBtn")}</Button>
-        <Button variant="secondary" className="h-10 px-2 text-[11px]" disabled={!txs.length} onClick={() => void withPin(t("pinForCsv"), `${txs.length} transaksi ${range.label} diunduh (CSV)`, () => exportTransactionsCsv(txs, profile))}><FileSpreadsheet size={14} /> {t("excelBtn")}</Button>
+        <Button variant="secondary" className="h-10 px-2 text-[11px]" disabled={!txs.length} onClick={() => void withPin(t("pinForCsv"), lang === "en" ? `${txs.length} transactions ${range.label} downloaded (CSV)` : `${txs.length} transaksi ${range.label} diunduh (CSV)`, () => exportTransactionsCsv(txs, profile, lang))}><FileSpreadsheet size={14} /> {t("excelBtn")}</Button>
         <Button variant="secondary" className="h-10 px-2 text-[11px]" onClick={onImport}><Upload size={14} /> {t("importBtn")}</Button>
       </div>
 
@@ -672,7 +672,7 @@ function SheetFrame({ eyebrow, eyebrowClass = "text-primary", title, onClose, ch
 function EntrySheet({ type, tx, onClose }: { type: Tx["type"]; tx?: Tx; onClose: () => void }) {
   const income = type === "income";
   const cats = income ? incomeCategories : expenseCategories;
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
   const [value, setValue] = useState(tx?.amount ?? 0);
   const [title, setTitle] = useState(tx?.title ?? "");
   const [category, setCategory] = useState<Category>(tx?.category ?? cats[0]!);
@@ -685,7 +685,7 @@ function EntrySheet({ type, tx, onClose }: { type: Tx["type"]; tx?: Tx; onClose:
   };
   const save = () => {
     if (!value) return;
-    const fields = { title: title.trim().slice(0, 80) || category, amount: value, category };
+    const fields = { title: title.trim().slice(0, 80) || categoryLabel(category, lang), amount: value, category };
     if (tx) updateTransaction(tx.id, { ...fields, ...(date === dateInputValue(new Date(tx.date)) ? {} : { date: dateInputToIso(date) }) });
     else addTransaction({ ...fields, type, source: "manual", date: dateInputToIso(date) });
     onClose();
@@ -694,8 +694,8 @@ function EntrySheet({ type, tx, onClose }: { type: Tx["type"]; tx?: Tx; onClose:
     <SheetFrame eyebrow={income ? t("incomeEyebrow") : t("expenseEyebrow")} eyebrowClass={income ? "text-success" : "text-danger"} title={tx ? t("editTxTitle") : t("addTxTitle")} onClose={onClose}>
       <Label>{t("amountLabel")}</Label><MoneyInput large autoFocus={!tx} label={t("amountLabel")} value={value} onChange={setValue} />
       <Label>{t("notesLabel")}</Label><input aria-label={t("notesLabel")} value={title} onChange={(e) => changeTitle(e.target.value)} maxLength={80} className={textField} placeholder={income ? t("incomeNotesPlaceholder") : t("expenseNotesPlaceholder")}/>
-      <Label>{t("categoryLabel")}</Label><Chips options={cats} value={category} onChange={(c) => { setCategory(c); setPicked(true); }} />
-      <Label>{t("dateLabel")}</Label><DateInput value={date} onChange={setDate} />
+      <Label>{t("categoryLabel")}</Label><Chips options={cats} value={category} onChange={(c) => { setCategory(c); setPicked(true); }} format={(c) => categoryLabel(c, lang)} />
+      <Label>{t("dateLabel")}</Label><DateInput label={t("dateLabel")} value={date} onChange={setDate} />
       <Button className="mt-6 h-12 w-full" disabled={!value} onClick={save}>{tx ? t("saveChangesBtn") : t("saveTxBtn")}</Button>
       {tx && <Button variant="ghost" className="mt-2 h-11 w-full text-xs text-danger hover:text-danger" onClick={() => { removeTransaction(tx.id); onClose(); }}><Trash2 size={15} /> {t("deleteTxBtn")}</Button>}
     </SheetFrame>
@@ -863,11 +863,11 @@ function RangeSheet({ value, onApply, onClose }: { value: Period; onApply: (p: P
 function CsvSheet({ onClose }: { onClose: () => void }) {
   const [text, setText] = useState("");
   const { t, lang } = useTranslation();
-  const result: CsvResult | null = text.trim() ? parseCsv(text) : null;
+  const result: CsvResult | null = text.trim() ? parseCsv(text, lang) : null;
   const run = () => {
     if (!result?.rows.length) return;
     const n = addTransactions(result.rows);
-    logActivity({ tool: "import_csv", tier: "T2", status: "approved", summary: `${n} transaksi diimpor dari CSV${result.errors.length ? `, ${result.errors.length} baris dilewati` : ""}` });
+    logActivity({ tool: "import_csv", tier: "T2", status: "approved", summary: lang === "en" ? `${n} transactions imported from CSV${result.errors.length ? `, ${result.errors.length} rows skipped` : ""}` : `${n} transaksi diimpor dari CSV${result.errors.length ? `, ${result.errors.length} baris dilewati` : ""}` });
     toast.success(t("importSuccessToast", { n }));
     onClose();
   };
@@ -876,9 +876,9 @@ function CsvSheet({ onClose }: { onClose: () => void }) {
       <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{t("importCsvDesc")}</p>
       <div className="mt-3 grid grid-cols-2 gap-2">
         <label className="flex h-11 cursor-pointer items-center justify-center gap-2 rounded-xl border border-border text-xs font-semibold hover:bg-muted"><Upload size={15} /> {t("chooseFileBtn")}<input type="file" accept=".csv,text/csv,text/plain" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (f) setText(await f.text()); }} /></label>
-        <Button variant="secondary" className="h-11 text-xs" onClick={() => setText(csvTemplate)}>{t("viewExampleBtn")}</Button>
+        <Button variant="secondary" className="h-11 text-xs" onClick={() => setText(csvTemplate(lang))}>{t("viewExampleBtn")}</Button>
       </div>
-      <textarea aria-label={t("csvTextareaAria")} value={text} onChange={(e) => setText(e.target.value)} rows={6} className="mt-3 w-full rounded-2xl border border-border bg-transparent p-3 font-mono text-[11px] outline-none focus:ring-2 focus:ring-ring" placeholder={"tanggal;jenis;jumlah;kategori;keterangan\n09/10/2026;pemasukan;320.000;Penjualan;Roti manis pagi"} />
+      <textarea aria-label={t("csvTextareaAria")} value={text} onChange={(e) => setText(e.target.value)} rows={6} className="mt-3 w-full rounded-2xl border border-border bg-transparent p-3 font-mono text-[11px] outline-none focus:ring-2 focus:ring-ring" placeholder={csvTemplate(lang).split("\n").slice(0, 2).join("\n")} />
       {result && (
         <div className="mt-3 space-y-2 text-xs">
           <p className="rounded-xl bg-success-soft px-3 py-2 font-semibold text-success">{result.rows.length} {t("readyToImport")}{result.rows.length ? `, total ${rp(result.rows.reduce((s, r) => s + r.amount, 0))}` : ""}.</p>

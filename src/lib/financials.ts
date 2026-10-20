@@ -1,10 +1,15 @@
 import { useSyncExternalStore } from "react";
 import { cloudEnabled } from "./env";
+import { getLanguage, type Language } from "./i18n";
+import { lenderName } from "./scoring";
 
 export const rp = (n: number) => `${n < 0 ? "-" : ""}Rp${Math.abs(Math.round(n)).toLocaleString("id-ID")}`;
 
 const DAY = 86400000;
 const uuid = () => crypto.randomUUID();
+/** Picks the English or Indonesian text. */
+const tl = (lang: Language, en: string, id: string) => (lang === "en" ? en : id);
+const locale = (lang: Language) => (lang === "en" ? "en-US" : "id-ID");
 
 /* ---------- Date helpers for <input type="date"> ---------- */
 export const dateInputValue = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -16,7 +21,7 @@ const dayOffset = (n: number, now = new Date()) => dateInputValue(new Date(now.g
 // Device mode: every store is saved in localStorage.
 // Cloud mode (Supabase configured): stores are an in-memory copy of the account's rows,
 // filled after sign-in by hydrateStores() and written back through the Remote adapter.
-function createStore<T>(key: string, initial: T, revive: (raw: unknown) => T, cloudInitial: T = initial) {
+function createStore<T>(key: string, initial: T, revive: (raw: unknown) => T, cloudInitial: T = initial, deviceInitial?: () => T) {
   const start = cloudEnabled ? cloudInitial : initial;
   let state = start;
   let loaded = cloudEnabled;
@@ -27,6 +32,7 @@ function createStore<T>(key: string, initial: T, revive: (raw: unknown) => T, cl
     try {
       const raw = window.localStorage.getItem(key);
       if (raw) state = revive(JSON.parse(raw));
+      else if (deviceInitial) state = deviceInitial(); // first visit: example data in the user's language
     } catch {
       /* keep initial */
     }
@@ -84,10 +90,13 @@ export type Category = "Penjualan" | "Pemasukan lain" | "Bahan baku" | "Pengirim
 export const incomeCategories: Category[] = ["Penjualan", "Pemasukan lain"];
 export const expenseCategories: Category[] = ["Bahan baku", "Pengiriman", "Listrik & gas", "Upah karyawan", "Lainnya"];
 const COGS: Category[] = ["Bahan baku"];
+// Categories are stored in Indonesian (also in Supabase); only the label shown follows the language.
+const categoryEn: Record<Category, string> = { Penjualan: "Sales", "Pemasukan lain": "Other income", "Bahan baku": "Raw materials", Pengiriman: "Delivery", "Listrik & gas": "Electricity & gas", "Upah karyawan": "Wages", Lainnya: "Other" };
+export const categoryLabel = (c: string, lang: Language) => (lang === "en" ? (categoryEn[c as Category] ?? c) : c);
 
 export type Tx = { id: string; title: string; amount: number; type: "income" | "expense"; category: Category; date: string; source?: "manual" | "scan" | "csv" };
 
-function buildSeed(freshIds = false): Tx[] {
+function buildSeed(freshIds = false, lang: Language = "id"): Tx[] {
   const now = new Date();
   now.setHours(12, 0, 0, 0);
   const t = now.getTime();
@@ -98,16 +107,16 @@ function buildSeed(freshIds = false): Tx[] {
     const k = m === 0 ? 1 : m === 1 ? 0.92 : 0.85;
     const ship = m === 0 ? 1.3 : k;
     rows.push(
-      [o + 1, "Penjualan roti harian", 890000 * k, "income", "Penjualan"],
-      [o + 8, "Penjualan roti mingguan", 760000 * k, "income", "Penjualan"],
-      [o + 15, "Pesanan katering", 657000 * k, "income", "Penjualan"],
-      [o + 22, "Penjualan roti harian", 600000 * k, "income", "Penjualan"],
-      [o + 0, "Restok bahan baku", 245000 * k, "expense", "Bahan baku"],
-      [o + 12, "Tepung & telur", 875000 * k, "expense", "Bahan baku"],
-      [o + 2, "Biaya pengiriman", 85000 * ship, "expense", "Pengiriman"],
-      [o + 18, "Kurir pesanan", 200000 * ship, "expense", "Pengiriman"],
-      [o + 10, "Listrik & gas", 252000 * k, "expense", "Listrik & gas"],
-      [o + 20, "Upah paruh waktu", 150000 * k, "expense", "Upah karyawan"],
+      [o + 1, tl(lang, "Daily bread sales", "Penjualan roti harian"), 890000 * k, "income", "Penjualan"],
+      [o + 8, tl(lang, "Weekly bread sales", "Penjualan roti mingguan"), 760000 * k, "income", "Penjualan"],
+      [o + 15, tl(lang, "Catering order", "Pesanan katering"), 657000 * k, "income", "Penjualan"],
+      [o + 22, tl(lang, "Daily bread sales", "Penjualan roti harian"), 600000 * k, "income", "Penjualan"],
+      [o + 0, tl(lang, "Ingredient restock", "Restok bahan baku"), 245000 * k, "expense", "Bahan baku"],
+      [o + 12, tl(lang, "Flour & eggs", "Tepung & telur"), 875000 * k, "expense", "Bahan baku"],
+      [o + 2, tl(lang, "Delivery fee", "Biaya pengiriman"), 85000 * ship, "expense", "Pengiriman"],
+      [o + 18, tl(lang, "Order courier", "Kurir pesanan"), 200000 * ship, "expense", "Pengiriman"],
+      [o + 10, tl(lang, "Electricity & gas", "Listrik & gas"), 252000 * k, "expense", "Listrik & gas"],
+      [o + 20, tl(lang, "Part-time wages", "Upah paruh waktu"), 150000 * k, "expense", "Upah karyawan"],
     );
   }
   return rows.map(([d, title, amount, type, category], i) => ({
@@ -147,7 +156,7 @@ export function parseLedger(raw: unknown): Tx[] {
   return out;
 }
 
-const ledger = createStore<Tx[]>("fintar-ledger-v1", buildSeed(), parseLedger, []);
+const ledger = createStore<Tx[]>("fintar-ledger-v1", buildSeed(), parseLedger, [], () => buildSeed(false, getLanguage()));
 
 export function addTransaction(tx: Omit<Tx, "id" | "date"> & { date?: string }) {
   const row: Tx = { ...tx, id: uuid(), date: tx.date ?? new Date().toISOString() };
@@ -173,8 +182,8 @@ export function removeTransaction(id: string) {
 }
 /** Replaces all transactions and upcoming obligations with the example data set. */
 export function resetLedger() {
-  const txs = buildSeed(cloudEnabled);
-  const items = buildPlannedSeed();
+  const txs = buildSeed(cloudEnabled, getLanguage());
+  const items = buildPlannedSeed(getLanguage());
   ledger.set(txs);
   planned.set(items);
   push((r) => r.replaceData(txs, items));
@@ -214,7 +223,8 @@ export function parseProfile(raw: unknown): Profile {
 }
 
 export const blankProfile: Profile = { name: "Usahaku", category: "Lainnya", openingCash: 0, inventory: 0, equipment: 0, target: null };
-const profile = createStore<Profile>("fintar-profile-v1", defaultProfile, parseProfile, blankProfile);
+export const blankProfileFor = (lang: Language): Profile => ({ ...blankProfile, name: tl(lang, "My business", "Usahaku"), category: tl(lang, "Other", "Lainnya") });
+const profile = createStore<Profile>("fintar-profile-v1", defaultProfile, parseProfile, blankProfile, () => ({ ...defaultProfile, category: tl(getLanguage(), "Food & Beverage", "Makanan") }));
 export const useProfile = profile.use;
 export function updateProfile(patch: Partial<Profile>) {
   const next = { ...profile.get(), ...patch };
@@ -225,10 +235,10 @@ export function updateProfile(patch: Partial<Profile>) {
 /* ---------- Upcoming obligations: supplier debts and scheduled spending ---------- */
 export type Planned = { id: string; kind: "debt" | "expense"; label: string; amount: number; /** YYYY-MM-DD */ due: string; done: boolean };
 
-function buildPlannedSeed(): Planned[] {
+function buildPlannedSeed(lang: Language = "id"): Planned[] {
   return [
-    { id: uuid(), kind: "debt", label: "Utang tepung ke pemasok", amount: 750000, due: dayOffset(5), done: false },
-    { id: uuid(), kind: "expense", label: "Restok bahan pesanan besar", amount: 3500000, due: dayOffset(9), done: false },
+    { id: uuid(), kind: "debt", label: tl(lang, "Flour debt to supplier", "Utang tepung ke pemasok"), amount: 750000, due: dayOffset(5), done: false },
+    { id: uuid(), kind: "expense", label: tl(lang, "Stock for a large order", "Restok bahan pesanan besar"), amount: 3500000, due: dayOffset(9), done: false },
   ];
 }
 export function parsePlanned(raw: unknown): Planned[] {
@@ -244,8 +254,9 @@ export function parsePlanned(raw: unknown): Planned[] {
   return out;
 }
 // Fixed ids keep the server-rendered list identical to the first client render.
-const plannedSeed: Planned[] = buildPlannedSeed().map((p, i) => ({ ...p, id: `seed-plan-${i}` }));
-const planned = createStore<Planned[]>("fintar-planned-v1", plannedSeed, parsePlanned, []);
+const seedPlanIds = (items: Planned[]) => items.map((p, i) => ({ ...p, id: `seed-plan-${i}` }));
+const plannedSeed: Planned[] = seedPlanIds(buildPlannedSeed());
+const planned = createStore<Planned[]>("fintar-planned-v1", plannedSeed, parsePlanned, [], () => seedPlanIds(buildPlannedSeed(getLanguage())));
 export const usePlanned = planned.use;
 export function addPlanned(p: Omit<Planned, "id" | "done">) {
   const row: Planned = { ...p, id: uuid(), done: false };
@@ -271,7 +282,7 @@ export function settlePlanned(id: string) {
   const next = { ...row, done: true };
   planned.set(planned.get().map((p) => (p.id === id ? next : p)));
   push((r) => r.upsertPlanned(next));
-  addTransaction({ title: row.kind === "debt" ? `Bayar ${row.label}` : row.label, amount: row.amount, type: "expense", category: "Bahan baku", source: "manual" });
+  addTransaction({ title: row.kind === "debt" ? tl(getLanguage(), `Pay ${row.label}`, `Bayar ${row.label}`) : row.label, amount: row.amount, type: "expense", category: "Bahan baku", source: "manual" });
 }
 export const openPlanned = (items: Planned[]) => items.filter((p) => !p.done).sort((a, b) => a.due.localeCompare(b.due));
 export const payableTotal = (items: Planned[]) => items.filter((p) => p.kind === "debt" && !p.done).reduce((s, p) => s + p.amount, 0);
@@ -311,7 +322,7 @@ export const useAiConsent = consent.use;
 export function setAiConsent(granted: boolean) {
   consent.set(granted);
   push((r) => r.setConsent(granted));
-  logActivity({ tool: "update_consent", tier: "T0", status: "completed", summary: granted ? "Izin pemrosesan AI diberikan" : "Izin pemrosesan AI dicabut" });
+  logActivity({ tool: "update_consent", tier: "T0", status: "completed", summary: granted ? tl(getLanguage(), "AI processing consent given", "Izin pemrosesan AI diberikan") : tl(getLanguage(), "AI processing consent revoked", "Izin pemrosesan AI dicabut") });
 }
 
 /* ---------- Loan application (simulated: nothing is sent to a real lender) ---------- */
@@ -326,13 +337,13 @@ export function submitLoan(a: Omit<LoanApplication, "id" | "submittedAt">) {
   const row = { ...a, id: uuid(), submittedAt: Date.now() };
   loan.set(row);
   push((r) => r.saveLoan(row));
-  logActivity({ tool: "submit_proposal_sandbox", tier: "T2", status: "approved", summary: `Proposal ${rp(a.amount)} dikirim ke ${a.lender} (simulasi)`, detail: { ...a } });
+  logActivity({ tool: "submit_proposal_sandbox", tier: "T2", status: "approved", summary: tl(getLanguage(), `Proposal for ${rp(a.amount)} sent to ${lenderName(a.lender, "en")} (simulated)`, `Proposal ${rp(a.amount)} dikirim ke ${a.lender} (simulasi)`), detail: { ...a } });
 }
 export function clearLoan() {
   loan.set(null);
   push((r) => r.saveLoan(null));
 }
-export const loanStages = ["Proposal terkirim", "Laporan keuangan diverifikasi", "Pengajuan disetujui"] as const;
+export const loanStages = (lang: Language) => (lang === "en" ? ["Proposal sent", "Financial statements verified", "Application approved"] : ["Proposal terkirim", "Laporan keuangan diverifikasi", "Pengajuan disetujui"]);
 /** Index of the stage reached; the simulation advances on a timer after submitting. */
 export const loanStage = (a: LoanApplication, now = Date.now()) => (now - a.submittedAt < 8000 ? 0 : now - a.submittedAt < 20000 ? 1 : 2);
 
@@ -347,10 +358,10 @@ export function currentInsurance(log: Activity[]): InsuranceChoice | null {
   return { name: d["name"], premium: Number(d["premium"]), covers: Array.isArray(d["covers"]) ? d["covers"].map(String) : [], assetValue: Number(d["assetValue"]) || 0, at: last.at };
 }
 export function chooseInsurance(c: Omit<InsuranceChoice, "at">) {
-  logActivity({ tool: "select_insurance", tier: "T2", status: "approved", summary: `Paket asuransi ${c.name} diajukan, premi ${rp(c.premium)}/bulan (simulasi)`, detail: { ...c } });
+  logActivity({ tool: "select_insurance", tier: "T2", status: "approved", summary: tl(getLanguage(), `Insurance package ${c.name} requested, premium ${rp(c.premium)}/month (simulated)`, `Paket asuransi ${c.name} diajukan, premi ${rp(c.premium)}/bulan (simulasi)`), detail: { ...c } });
 }
 export function cancelInsurance() {
-  logActivity({ tool: "cancel_insurance", tier: "T2", status: "approved", summary: "Pengajuan paket asuransi dibatalkan" });
+  logActivity({ tool: "cancel_insurance", tier: "T2", status: "approved", summary: tl(getLanguage(), "Insurance request cancelled", "Pengajuan paket asuransi dibatalkan") });
 }
 
 /* ---------- Bulk store access for cloud sync ---------- */
@@ -373,13 +384,13 @@ export function clearStores() {
 export type PeriodKey = "week" | "month" | "quarter" | "year";
 /** A preset, or a range of calendar days the owner picked (YYYY-MM-DD, both ends included). */
 export type Period = PeriodKey | { from: string; to: string };
-const fmt = (d: Date) => d.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+const fmt = (d: Date, lang: Language) => d.toLocaleDateString(locale(lang), { day: "numeric", month: "short", year: "numeric" });
 
-export function periodRange(key: Period, now = new Date()) {
+export function periodRange(key: Period, now = new Date(), lang: Language = "id") {
   if (typeof key !== "string") {
     const start = new Date(`${key.from}T00:00:00`);
     const end = new Date(`${key.to}T23:59:59.999`);
-    return { start, end, label: `${fmt(start)} – ${fmt(end)}` };
+    return { start, end, label: `${fmt(start, lang)} – ${fmt(end, lang)}` };
   }
   const end = new Date(now);
   end.setHours(23, 59, 59, 999);
@@ -389,7 +400,7 @@ export function periodRange(key: Period, now = new Date()) {
   if (key === "month") start.setDate(1);
   if (key === "quarter") { start.setDate(1); start.setMonth(start.getMonth() - 2); }
   if (key === "year") { start.setMonth(0); start.setDate(1); }
-  return { start, end, label: `${fmt(start)} – ${fmt(end)}` };
+  return { start, end, label: `${fmt(start, lang)} – ${fmt(end, lang)}` };
 }
 export const periods: { key: PeriodKey; label: string }[] = [
   { key: "week", label: "7 hari" },
@@ -412,10 +423,13 @@ export function rollingDays(txs: Tx[], from: number, to: number, now = new Date(
 }
 
 const group = (txs: Tx[]) => {
+  // label = the stored category; statements translate it with categoryLabel()
   const m = new Map<string, number>();
   txs.forEach((t) => m.set(t.category, (m.get(t.category) ?? 0) + t.amount));
   return [...m.entries()].map(([label, value]) => ({ label, value }));
 };
+
+const named = (rows: { label: string; value: number }[], lang: Language) => rows.map((r) => ({ ...r, label: categoryLabel(r.label, lang) }));
 
 export function summarize(txs: Tx[]) {
   const income = txs.filter((t) => t.type === "income");
@@ -429,38 +443,38 @@ export function summarize(txs: Tx[]) {
 
 export const cashBalance = (all: Tx[], p: Profile) => p.openingCash + summarize(all).net;
 
-export function getStatements(all: Tx[], key: Period, p: Profile = defaultProfile, items: Planned[] = []) {
+export function getStatements(all: Tx[], key: Period, p: Profile = defaultProfile, items: Planned[] = [], lang: Language = "id") {
   const txs = filterPeriod(all, key);
   const totals = summarize(txs);
   // A picked range can end in the past; the cash and balance sheet are then as of its last day.
-  const end = periodRange(key).end;
+  const end = periodRange(key, new Date(), lang).end;
   const allNet = summarize(typeof key === "string" ? all : all.filter((t) => new Date(t.date) <= end)).net;
   const cash = p.openingCash + allNet;
   const payable = payableTotal(items);
   const expense = txs.filter((t) => t.type === "expense");
   const incomeStatement = {
-    revenue: group(txs.filter((t) => t.type === "income")),
-    cogs: group(expense.filter((t) => COGS.includes(t.category))),
-    opex: group(expense.filter((t) => !COGS.includes(t.category))),
+    revenue: named(group(txs.filter((t) => t.type === "income")), lang),
+    cogs: named(group(expense.filter((t) => COGS.includes(t.category))), lang),
+    opex: named(group(expense.filter((t) => !COGS.includes(t.category))), lang),
   };
   const cashFlow = [
-    { label: "Kas masuk dari pelanggan", value: totals.revenue },
-    { label: "Kas keluar ke pemasok & biaya", value: -totals.expense },
-    { label: "Aktivitas investasi", value: 0 },
-    { label: "Aktivitas pendanaan", value: 0 },
+    { label: tl(lang, "Cash in from customers", "Kas masuk dari pelanggan"), value: totals.revenue },
+    { label: tl(lang, "Cash out to suppliers & costs", "Kas keluar ke pemasok & biaya"), value: -totals.expense },
+    { label: tl(lang, "Investing activities", "Aktivitas investasi"), value: 0 },
+    { label: tl(lang, "Financing activities", "Aktivitas pendanaan"), value: 0 },
   ];
   // Owner capital is derived from the opening balances, so the sheet always balances.
   const balanceSheet = {
     assets: [
-      { label: "Kas", value: cash },
-      { label: "Persediaan bahan", value: p.inventory },
-      { label: "Peralatan usaha", value: p.equipment },
+      { label: tl(lang, "Cash", "Kas"), value: cash },
+      { label: tl(lang, "Inventory", "Persediaan bahan"), value: p.inventory },
+      { label: tl(lang, "Equipment", "Peralatan usaha"), value: p.equipment },
     ],
-    liabilities: [{ label: "Utang ke pemasok", value: payable }],
+    liabilities: [{ label: tl(lang, "Supplier payables", "Utang ke pemasok"), value: payable }],
     equity: [
-      { label: "Modal pemilik", value: p.openingCash + p.inventory + p.equipment - payable },
-      { label: "Laba ditahan", value: allNet - totals.net },
-      { label: "Laba periode berjalan", value: totals.net },
+      { label: tl(lang, "Owner's capital", "Modal pemilik"), value: p.openingCash + p.inventory + p.equipment - payable },
+      { label: tl(lang, "Retained earnings", "Laba ditahan"), value: allNet - totals.net },
+      { label: tl(lang, "Profit for the period", "Laba periode berjalan"), value: totals.net },
     ],
   };
   return { txs, incomeStatement, totals, cashFlow, balanceSheet, cash };
@@ -492,9 +506,10 @@ export type Insight = { level: "danger" | "warning" | "success"; title: string; 
 
 const pctChange = (cur: number, prev: number) => Math.round(((cur - prev) / prev) * 100);
 export const daysUntil = (due: string, now = new Date()) => Math.round((Date.parse(`${due}T12:00:00`) - Date.parse(`${dateInputValue(now)}T12:00:00`)) / DAY);
-export const shortDate = (due: string) => new Date(`${due}T12:00:00`).toLocaleDateString("id-ID", { day: "numeric", month: "short" });
+export const shortDate = (due: string, lang: Language = "id") => new Date(`${due}T12:00:00`).toLocaleDateString(locale(lang), { day: "numeric", month: "short" });
 
-export function getInsights(all: Tx[], p: Profile, items: Planned[] = [], now = new Date()): Insight[] {
+export function getInsights(all: Tx[], p: Profile, items: Planned[] = [], lang: Language = "id", now = new Date()): Insight[] {
+  const L = (en: string, id: string) => tl(lang, en, id);
   const curTx = rollingDays(all, 0, 30, now);
   const prevTx = rollingDays(all, 30, 60, now);
   const cur = summarize(curTx);
@@ -502,41 +517,49 @@ export function getInsights(all: Tx[], p: Profile, items: Planned[] = [], now = 
   const f = forecastCash(all, p, items, 30, now);
   const out: Insight[] = [];
 
-  if (f.cash < 0) out.push({ level: "danger", title: `Kas minus ${rp(-f.cash)}`, text: "Pengeluaran tercatat sudah melebihi uang yang ada. Periksa catatan atau cari tambahan modal.", action: "loan" });
+  if (f.cash < 0) out.push({ level: "danger", title: L(`Cash is negative by ${rp(-f.cash)}`, `Kas minus ${rp(-f.cash)}`), text: L("Recorded spending is already more than the money you have. Check your records or look for extra capital.", "Pengeluaran tercatat sudah melebihi uang yang ada. Periksa catatan atau cari tambahan modal."), action: "loan" });
   else if (f.deficit) {
-    const why = f.deficit.trigger ? `Setelah ${f.deficit.trigger.label} ${rp(f.deficit.trigger.amount)} jatuh tempo ${shortDate(f.deficit.trigger.due)}, kas kurang ${rp(f.deficit.shortfall)}.` : `Pengeluaran rata-rata ${rp(f.dailyOut)}/hari lebih besar dari pemasukan ${rp(f.dailyIn)}/hari.`;
-    out.push({ level: f.deficit.day <= 14 ? "danger" : "warning", title: `Kas diperkirakan minus dalam ${f.deficit.day} hari`, text: `${why} Siapkan modal atau tunda sebagian belanja.`, action: "loan" });
+    const tr = f.deficit.trigger;
+    const why = tr
+      ? L(`After ${tr.label} ${rp(tr.amount)} is due on ${shortDate(tr.due, lang)}, cash is short by ${rp(f.deficit.shortfall)}.`, `Setelah ${tr.label} ${rp(tr.amount)} jatuh tempo ${shortDate(tr.due, lang)}, kas kurang ${rp(f.deficit.shortfall)}.`)
+      : L(`Average spending of ${rp(f.dailyOut)}/day is higher than income of ${rp(f.dailyIn)}/day.`, `Pengeluaran rata-rata ${rp(f.dailyOut)}/hari lebih besar dari pemasukan ${rp(f.dailyIn)}/hari.`);
+    out.push({ level: f.deficit.day <= 14 ? "danger" : "warning", title: L(`Cash projected to go negative in ${f.deficit.day} days`, `Kas diperkirakan minus dalam ${f.deficit.day} hari`), text: `${why} ${L("Prepare extra capital or postpone some purchases.", "Siapkan modal atau tunda sebagian belanja.")}`, action: "loan" });
   }
 
   const dueSoon = openPlanned(items).filter((o) => o.kind === "debt" && daysUntil(o.due, now) <= 7)[0];
   if (dueSoon) {
     const d = daysUntil(dueSoon.due, now);
-    out.push({ level: "warning", title: d < 0 ? `${dueSoon.label} terlambat ${-d} hari` : d === 0 ? `${dueSoon.label} jatuh tempo hari ini` : `${dueSoon.label} jatuh tempo ${d} hari lagi`, text: `${rp(dueSoon.amount)} perlu dibayar ${shortDate(dueSoon.due)}. Sisihkan dari penjualan beberapa hari ke depan.` });
+    const title = d < 0 ? L(`${dueSoon.label} is ${-d} days overdue`, `${dueSoon.label} terlambat ${-d} hari`) : d === 0 ? L(`${dueSoon.label} is due today`, `${dueSoon.label} jatuh tempo hari ini`) : L(`${dueSoon.label} is due in ${d} days`, `${dueSoon.label} jatuh tempo ${d} hari lagi`);
+    out.push({ level: "warning", title, text: L(`${rp(dueSoon.amount)} must be paid on ${shortDate(dueSoon.due, lang)}. Set aside some sales over the next few days.`, `${rp(dueSoon.amount)} perlu dibayar ${shortDate(dueSoon.due, lang)}. Sisihkan dari penjualan beberapa hari ke depan.`) });
   }
 
-  if (cur.net < 0) out.push({ level: "danger", title: `30 hari terakhir rugi ${rp(-cur.net)}`, text: "Pengeluaran lebih besar dari pemasukan. Tanya Finix biaya mana yang bisa ditekan.", action: "finix" });
-  else if (cur.revenue > 0 && cur.net / cur.revenue < 0.1) out.push({ level: "warning", title: "Margin bersih tipis", text: `Dari tiap Rp100 penjualan hanya tersisa Rp${Math.round((cur.net / cur.revenue) * 100)}. Tinjau harga jual atau biaya terbesar.`, action: "finix" });
+  if (cur.net < 0) out.push({ level: "danger", title: L(`Loss of ${rp(-cur.net)} in the last 30 days`, `30 hari terakhir rugi ${rp(-cur.net)}`), text: L("Spending is higher than income. Ask Finix which costs can be cut.", "Pengeluaran lebih besar dari pemasukan. Tanya Finix biaya mana yang bisa ditekan."), action: "finix" });
+  else if (cur.revenue > 0 && cur.net / cur.revenue < 0.1) out.push({ level: "warning", title: L("Thin net margin", "Margin bersih tipis"), text: L(`Only Rp${Math.round((cur.net / cur.revenue) * 100)} is left from every Rp100 of sales. Review your prices or your largest costs.`, `Dari tiap Rp100 penjualan hanya tersisa Rp${Math.round((cur.net / cur.revenue) * 100)}. Tinjau harga jual atau biaya terbesar.`), action: "finix" });
 
   const prevByCat = new Map(group(prevTx.filter((t) => t.type === "expense")).map((g) => [g.label, g.value]));
   const rise = group(curTx.filter((t) => t.type === "expense"))
     .map((g) => ({ ...g, before: prevByCat.get(g.label) ?? 0 }))
     .filter((g) => g.before > 0 && g.value - g.before >= 50000 && g.value / g.before >= 1.15)
     .sort((a, b) => b.value - b.before - (a.value - a.before))[0];
-  if (rise) out.push({ level: "warning", title: `Biaya ${rise.label.toLowerCase()} naik ${pctChange(rise.value, rise.before)}%`, text: `${rp(rise.value)} dalam 30 hari terakhir, sebelumnya ${rp(rise.before)}.`, action: "finix" });
+  if (rise) {
+    const name = categoryLabel(rise.label, lang);
+    out.push({ level: "warning", title: L(`${name} costs up ${pctChange(rise.value, rise.before)}%`, `Biaya ${name.toLowerCase()} naik ${pctChange(rise.value, rise.before)}%`), text: L(`${rp(rise.value)} in the last 30 days, ${rp(rise.before)} before.`, `${rp(rise.value)} dalam 30 hari terakhir, sebelumnya ${rp(rise.before)}.`), action: "finix" });
+  }
 
   if (prev.revenue > 0) {
     const ch = pctChange(cur.revenue, prev.revenue);
-    if (ch >= 5) out.push({ level: "success", title: `Pemasukan naik ${ch}%`, text: `${rp(cur.revenue)} dalam 30 hari terakhir, sebelumnya ${rp(prev.revenue)}.` });
-    else if (ch <= -10) out.push({ level: "warning", title: `Pemasukan turun ${-ch}%`, text: `${rp(cur.revenue)} dalam 30 hari terakhir, sebelumnya ${rp(prev.revenue)}.`, action: "finix" });
+    const text = L(`${rp(cur.revenue)} in the last 30 days, ${rp(prev.revenue)} before.`, `${rp(cur.revenue)} dalam 30 hari terakhir, sebelumnya ${rp(prev.revenue)}.`);
+    if (ch >= 5) out.push({ level: "success", title: L(`Income up ${ch}%`, `Pemasukan naik ${ch}%`), text });
+    else if (ch <= -10) out.push({ level: "warning", title: L(`Income down ${-ch}%`, `Pemasukan turun ${-ch}%`), text, action: "finix" });
   }
 
-  if (p.target && cur.revenue >= p.target.amount) out.push({ level: "success", title: "Target omzet tercapai", text: `Omzet 30 hari terakhir ${rp(cur.revenue)}, melewati target ${rp(p.target.amount)}.` });
+  if (p.target && cur.revenue >= p.target.amount) out.push({ level: "success", title: L("Sales target reached", "Target omzet tercapai"), text: L(`Sales in the last 30 days were ${rp(cur.revenue)}, above the ${rp(p.target.amount)} target.`, `Omzet 30 hari terakhir ${rp(cur.revenue)}, melewati target ${rp(p.target.amount)}.`) });
 
   const last = all.reduce((m, t) => Math.max(m, Date.parse(t.date)), 0);
   const idle = last ? Math.floor((now.getTime() - last) / DAY) : Infinity;
-  if (idle >= 3) out.push({ level: "warning", title: all.length ? `Sudah ${idle} hari belum mencatat` : "Belum ada transaksi", text: "Catatan yang rutin membuat laporan akurat dan memudahkan pengajuan modal.", action: "entry" });
+  if (idle >= 3) out.push({ level: "warning", title: all.length ? L(`No records for ${idle} days`, `Sudah ${idle} hari belum mencatat`) : L("No transactions yet", "Belum ada transaksi"), text: L("Regular records keep reports accurate and make applying for capital easier.", "Catatan yang rutin membuat laporan akurat dan memudahkan pengajuan modal."), action: "entry" });
 
-  if (!out.length) out.push({ level: "success", title: "Arus kas terpantau sehat", text: `Saldo ${rp(f.cash)} dan belum ada tanda bahaya dari catatanmu.` });
+  if (!out.length) out.push({ level: "success", title: L("Cash flow looks healthy", "Arus kas terpantau sehat"), text: L(`Balance ${rp(f.cash)}, and no warning signs in your records.`, `Saldo ${rp(f.cash)} dan belum ada tanda bahaya dari catatanmu.`) });
   const rank = { danger: 0, warning: 1, success: 2 };
   return out.sort((a, b) => rank[a.level] - rank[b.level]);
 }

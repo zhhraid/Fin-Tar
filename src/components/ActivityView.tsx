@@ -76,7 +76,7 @@ export function ActivityView({ onBack }: { onBack: () => void }) {
         </p>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
-          <Button variant="secondary" className="h-11 text-xs" disabled={!rows.length} onClick={() => void withPin(t("pinForLog"), `Log aktivitas diunduh (${rows.length} catatan)`, () => exportActivityJson(rows, chain))}><Download size={15} /> {t("downloadLogBtn")}</Button>
+          <Button variant="secondary" className="h-11 text-xs" disabled={!rows.length} onClick={() => void withPin(t("pinForLog"), t("logDownloadedSummary", { n: rows.length }), () => exportActivityJson(rows, chain))}><Download size={15} /> {t("downloadLogBtn")}</Button>
           <Button variant="secondary" className="h-11 text-xs" disabled={!consent} onClick={() => { setAiConsent(false); toast.success(t("aiConsentRevokedToast")); }}><ShieldOff size={15} /> {consent ? t("revokeAiConsentBtn") : t("aiConsentInactiveBtn")}</Button>
         </div>
 

@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ConsentGate } from "@/components/ConsentGate";
 import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
 import { authHeaders } from "@/lib/cloud";
-import { addTransaction, dateInputToIso, dateInputValue, expenseCategories, incomeCategories, logActivity, rp, type Category, type Tx } from "@/lib/financials";
+import { categoryLabel, addTransaction, dateInputToIso, dateInputValue, expenseCategories, incomeCategories, logActivity, rp, type Category, type Tx } from "@/lib/financials";
 import { useTranslation } from "@/lib/i18n";
 
 type Item = { name: string; qty: number; price: number; unsure?: boolean };
@@ -50,7 +50,7 @@ export function ScanView({ onClose, onManual }: { onClose: () => void; onManual:
       if (!data.items.length) throw new Error(lang === "en" ? "No receipt detected. Retake photo clearly or fill manually." : "Tidak ada struk terdeteksi. Foto ulang dengan lebih jelas, atau isi manual.");
       const today = dateInputValue();
       setDraft({ merchant: data.merchant, date: data.date && data.date <= today ? data.date : today, items: data.items, total: data.total, category: data.category, type: "expense", demo: Boolean(data.demo) });
-      logActivity({ tool: "parse_receipt", tier: "T0", status: "completed", summary: `Struk ${data.merchant || "tanpa nama"} dibaca: ${data.items.length} barang, total ${rp(data.total)}${data.demo ? " (mode demo)" : ""}`, detail: { merchant: data.merchant, date: data.date, items: data.items, total: data.total } });
+      logActivity({ tool: "parse_receipt", tier: "T0", status: "completed", summary: lang === "en" ? `Receipt ${data.merchant || "(no name)"} read: ${data.items.length} items, total ${rp(data.total)}${data.demo ? " (demo mode)" : ""}` : `Struk ${data.merchant || "tanpa nama"} dibaca: ${data.items.length} barang, total ${rp(data.total)}${data.demo ? " (mode demo)" : ""}`, detail: { merchant: data.merchant, date: data.date, items: data.items, total: data.total } });
     } catch (e) {
       setError(e instanceof Error ? e.message : (lang === "en" ? "Failed to read receipt." : "Gagal membaca struk."));
     } finally {
@@ -81,7 +81,7 @@ export function ScanView({ onClose, onManual }: { onClose: () => void; onManual:
     if (!draft || !draft.total) return;
     const title = (draft.merchant.trim() ? (lang === "en" ? `Receipt ${draft.merchant.trim()}` : `Struk ${draft.merchant.trim()}`) : (lang === "en" ? "Receipt transaction" : "Transaksi dari struk")).slice(0, 80);
     const tx = addTransaction({ title, amount: draft.total, type: draft.type, category: draft.category, source: "scan", date: dateInputToIso(draft.date) });
-    logActivity({ tool: "save_transaction", tier: "T2", status: "approved", summary: `${title} ${rp(draft.total)} disimpan setelah dikonfirmasi`, detail: { transactionId: tx.id, amount: draft.total, category: draft.category } });
+    logActivity({ tool: "save_transaction", tier: "T2", status: "approved", summary: lang === "en" ? `${title} ${rp(draft.total)} saved after confirmation` : `${title} ${rp(draft.total)} disimpan setelah dikonfirmasi`, detail: { transactionId: tx.id, amount: draft.total, category: draft.category } });
     setSaved(true);
   };
   const manual = <Button variant="ghost" className="mt-2 h-11 w-full text-xs" onClick={onManual} disabled={loading}><PencilLine size={15} /> {t("manualEntryBtn")}</Button>;
@@ -147,9 +147,9 @@ export function ScanView({ onClose, onManual }: { onClose: () => void; onManual:
           <Label>{t("storeNameLabel")}</Label>
           <input aria-label={t("storeNameLabel")} value={draft.merchant} maxLength={60} onChange={(e) => edit({ merchant: e.target.value })} className="h-11 w-full rounded-2xl border border-border bg-transparent px-4 text-sm outline-none focus:ring-2 focus:ring-ring" placeholder={t("storeNamePlaceholder")} />
           <Label>{t("dateLabel")}</Label>
-          <DateInput value={draft.date} onChange={(date) => edit({ date })} />
+          <DateInput label={t("dateLabel")} value={draft.date} onChange={(date) => edit({ date })} />
           <Label>{t("categoryLabel")}</Label>
-          <Chips options={cats} value={draft.category} onChange={(category) => edit({ category })} />
+          <Chips options={cats} value={draft.category} onChange={(category) => edit({ category })} format={(c) => categoryLabel(c, lang)} />
 
           <Label>{t("itemsDetailLabel")}</Label>
           <div className="space-y-2">

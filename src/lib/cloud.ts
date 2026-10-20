@@ -1,7 +1,8 @@
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { useSyncExternalStore } from "react";
 import { cloudEnabled, supabaseAnonKey, supabaseUrl } from "./env";
-import { blankProfile, clearStores, hydrateStores, parseActivity, parseLedger, parseLoan, parsePlanned, setRemote, type Activity, type LoanApplication, type Planned, type Profile, type Remote, type Tx } from "./financials";
+import { getLanguage } from "./i18n";
+import { blankProfile, blankProfileFor, clearStores, hydrateStores, parseActivity, parseLedger, parseLoan, parsePlanned, setRemote, type Activity, type LoanApplication, type Planned, type Profile, type Remote, type Tx } from "./financials";
 
 // Supabase sync. Tables and security rules are in supabase/migrations/.
 // Every query runs as the signed-in user; Row Level Security in the database
@@ -66,8 +67,8 @@ async function loadAccount(user: User) {
   const db = supabase();
   let business = ((await must(db.from("businesses").select("*").limit(1))) ?? [])[0] as Row | undefined;
   if (!business) {
-    const name = String(user.user_metadata?.["business_name"] ?? "").trim().slice(0, 40) || blankProfile.name;
-    business = (await must(db.from("businesses").insert({ ...profileRow(blankProfile), name }).select().single())) as Row;
+    const name = String(user.user_metadata?.["business_name"] ?? "").trim().slice(0, 40) || blankProfileFor(getLanguage()).name;
+    business = (await must(db.from("businesses").insert({ ...profileRow(blankProfileFor(getLanguage())), name }).select().single())) as Row;
   }
   const businessId = String(business["id"]);
   const [txs, debts, scheduled, consents, proposals, actions] = await Promise.all([
@@ -152,7 +153,7 @@ async function enter(user: User | null) {
     setAuth({ status: "signedIn", email: user.email ?? "" });
   } catch (e) {
     loadedFor = null;
-    reportError(`Gagal memuat data akun: ${e instanceof Error ? e.message : "kesalahan tak dikenal"}. Pastikan migrasi SQL sudah dijalankan.`);
+    reportError(L(`Could not load account data: ${e instanceof Error ? e.message : "unknown error"}. Make sure the SQL migrations have been run.`, `Gagal memuat data akun: ${e instanceof Error ? e.message : "kesalahan tak dikenal"}. Pastikan migrasi SQL sudah dijalankan.`));
     setAuth({ status: "signedOut" });
   }
 }
@@ -168,13 +169,15 @@ export function startCloud(onError: (message: string) => void) {
   });
 }
 
+const L = (en: string, id: string) => (getLanguage() === "en" ? en : id);
+const passwordRule = () => L("Password must be at least 8 characters and include a lowercase letter, an uppercase letter, a number and a symbol.", "Kata sandi minimal 8 karakter dan memuat huruf kecil, huruf besar, angka, dan simbol.");
 const authMessage = (message: string) =>
-  /invalid login/i.test(message) ? "Email atau kata sandi salah."
-  : /already registered/i.test(message) ? "Email ini sudah terdaftar. Silakan masuk."
-  : /at least \d+|should contain|should be at least/i.test(message) ? "Kata sandi minimal 8 karakter dan memuat huruf kecil, huruf besar, angka, dan simbol."
-  : /weak|pwned|leaked|easy to guess/i.test(message) ? "Kata sandi ini pernah bocor di internet. Pakai kata sandi lain."
-  : /not confirmed/i.test(message) ? "Email belum dikonfirmasi. Cek kotak masukmu."
-  : /rate limit/i.test(message) ? "Terlalu banyak percobaan. Coba lagi beberapa menit lagi."
+  /invalid login/i.test(message) ? L("Wrong email or password.", "Email atau kata sandi salah.")
+  : /already registered/i.test(message) ? L("This email is already registered. Please sign in.", "Email ini sudah terdaftar. Silakan masuk.")
+  : /at least \d+|should contain|should be at least/i.test(message) ? passwordRule()
+  : /weak|pwned|leaked|easy to guess/i.test(message) ? L("This password has appeared in a data leak. Please choose another one.", "Kata sandi ini pernah bocor di internet. Pakai kata sandi lain.")
+  : /not confirmed/i.test(message) ? L("Email not confirmed yet. Check your inbox.", "Email belum dikonfirmasi. Cek kotak masukmu.")
+  : /rate limit/i.test(message) ? L("Too many attempts. Try again in a few minutes.", "Terlalu banyak percobaan. Coba lagi beberapa menit lagi.")
   : message;
 
 /** Returns an error message, or null on success. */
@@ -199,7 +202,7 @@ export const strongPassword = (pw: string) => Object.values(passwordChecks(pw)).
 
 /** Returns "confirm" when Supabase sent a confirmation email instead of signing in. */
 export async function signUp(email: string, password: string, businessName: string): Promise<{ error: string | null; confirm: boolean }> {
-  if (!strongPassword(password)) return { error: "Kata sandi minimal 8 karakter dan memuat huruf kecil, huruf besar, angka, dan simbol.", confirm: false };
+  if (!strongPassword(password)) return { error: passwordRule(), confirm: false };
   const { data, error } = await supabase().auth.signUp({ email, password, options: { data: { business_name: businessName.trim().slice(0, 40) } } });
   return { error: error ? authMessage(error.message) : null, confirm: !error && !data.session };
 }
@@ -234,7 +237,8 @@ export async function verifyActivityLog(): Promise<LogCheck | null> {
 
 /** Authorization header for the AI endpoints; empty in device mode. */
 export async function authHeaders(): Promise<Record<string, string>> {
-  if (!cloudEnabled) return {};
+  const lang = { "x-fintar-lang": getLanguage() }; // server messages follow the app's language
+  if (!cloudEnabled) return lang;
   const { data } = await supabase().auth.getSession();
-  return data.session ? { authorization: `Bearer ${data.session.access_token}` } : {};
+  return data.session ? { ...lang, authorization: `Bearer ${data.session.access_token}` } : lang;
 }
