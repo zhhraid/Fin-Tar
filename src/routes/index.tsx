@@ -5,6 +5,7 @@ import {
   CalendarDays,
   Camera,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   CircleUserRound,
   Cloud,
@@ -28,7 +29,7 @@ import {
   WalletCards,
   X,
 } from "lucide-react";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ActivityView } from "@/components/ActivityView";
@@ -702,30 +703,159 @@ function EntrySheet({ type, tx, onClose }: { type: Tx["type"]; tx?: Tx; onClose:
 }
 
 function RangeSheet({ value, onApply, onClose }: { value: Period; onApply: (p: Period) => void; onClose: () => void }) {
-  const { t } = useTranslation();
-  const ledger = useLedger();
+  const { t, lang } = useTranslation();
+  const now = new Date();
+  const todayStr = dateInputValue(now);
+
+  const [mode, setMode] = useState<"today" | "week" | "month" | "dates">(() => {
+    if (value === "week") return "week";
+    if (typeof value === "object") {
+      if (value.from === todayStr && value.to === todayStr) return "today";
+    }
+    return "dates";
+  });
+
   const [from, setFrom] = useState(() => dateInputValue(periodRange(value).start));
   const [to, setTo] = useState(() => dateInputValue(periodRange(value).end));
-  const now = new Date();
-  const first = ledger.reduce((min, tx) => (tx.date < min ? tx.date : min), now.toISOString());
-  const quick: { label: string; from: string; to: string }[] = [
-    { label: t("rangeLastMonth"), from: dateInputValue(new Date(now.getFullYear(), now.getMonth() - 1, 1)), to: dateInputValue(new Date(now.getFullYear(), now.getMonth(), 0)) },
-    { label: t("rangeLastYear"), from: `${now.getFullYear() - 1}-01-01`, to: `${now.getFullYear() - 1}-12-31` },
-    { label: t("rangeAllTime"), from: dateInputValue(new Date(first)), to: dateInputValue(now) },
-  ];
-  const picked = quick.find((q) => q.from === from && q.to === to)?.label ?? "";
-  const invalid = Boolean(from && to && from > to);
+
+  const currentMonthValue = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const [selectedMonth, setSelectedMonth] = useState(currentMonthValue);
+
+  const monthOptions = useMemo(() => {
+    const options: { value: string; label: string; from: string; to: string }[] = [];
+    const ref = new Date();
+    for (let i = 0; i < 36; i++) {
+      const d = new Date(ref.getFullYear(), ref.getMonth() - i, 1);
+      const y = d.getFullYear();
+      const m = d.getMonth();
+      const mStr = String(m + 1).padStart(2, "0");
+      const lastDay = new Date(y, m + 1, 0).getDate();
+      const f = `${y}-${mStr}-01`;
+      const tDate = `${y}-${mStr}-${String(lastDay).padStart(2, "0")}`;
+      const monthName = d.toLocaleDateString(lang === "en" ? "en-US" : "id-ID", { month: "long", year: "numeric" });
+      const label = monthName.charAt(0).toUpperCase() + monthName.slice(1);
+      options.push({ value: `${y}-${mStr}`, label, from: f, to: tDate });
+    }
+    return options;
+  }, [lang]);
+
+  const invalid = mode === "dates" && Boolean(from && to && from > to);
+
   const apply = () => {
-    onApply({ from, to });
+    if (mode === "today") {
+      onApply({ from: todayStr, to: todayStr });
+    } else if (mode === "week") {
+      onApply("week");
+    } else if (mode === "month") {
+      const opt = monthOptions.find((m) => m.value === selectedMonth) ?? monthOptions[0]!;
+      onApply({ from: opt.from, to: opt.to });
+    } else {
+      onApply({ from, to });
+    }
     onClose();
   };
+
   return (
     <SheetFrame eyebrow={t("rangeSheetEyebrow")} title={t("rangeSheetTitle")} onClose={onClose}>
-      <div className="mt-4"><Chips options={quick.map((q) => q.label)} value={picked} onChange={(label) => { const q = quick.find((x) => x.label === label)!; setFrom(q.from); setTo(q.to); }} /></div>
-      <Label>{t("rangeFromLabel")}</Label><DateInput label={t("rangeFromLabel")} value={from} onChange={setFrom} />
-      <Label>{t("rangeToLabel")}</Label><DateInput label={t("rangeToLabel")} value={to} min={from} onChange={setTo} />
-      {invalid && <p role="alert" className="mt-3 text-xs font-semibold text-danger">{t("rangeInvalid")}</p>}
-      <Button className="mt-6 h-12 w-full" disabled={!from || !to || invalid} onClick={apply}>{t("rangeApplyBtn")}</Button>
+      <div className="mt-4 space-y-2.5">
+        {/* Hari Ini */}
+        <button
+          type="button"
+          onClick={() => setMode("today")}
+          className={`flex w-full items-center justify-between rounded-2xl border p-3.5 text-left transition-all ${
+            mode === "today" ? "border-primary bg-primary/5 text-foreground shadow-sm" : "border-border/60 hover:border-border text-foreground"
+          }`}
+        >
+          <span className="text-sm font-semibold">{t("rangeToday")}</span>
+          <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${
+            mode === "today" ? "border-primary bg-primary" : "border-muted-foreground/30"
+          }`}>
+            {mode === "today" && <span className="size-2 rounded-full bg-white dark:bg-card" />}
+          </span>
+        </button>
+
+        {/* 7 Hari Terakhir */}
+        <button
+          type="button"
+          onClick={() => setMode("week")}
+          className={`flex w-full items-center justify-between rounded-2xl border p-3.5 text-left transition-all ${
+            mode === "week" ? "border-primary bg-primary/5 text-foreground shadow-sm" : "border-border/60 hover:border-border text-foreground"
+          }`}
+        >
+          <span className="text-sm font-semibold">{t("range7Days")}</span>
+          <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${
+            mode === "week" ? "border-primary bg-primary" : "border-muted-foreground/30"
+          }`}>
+            {mode === "week" && <span className="size-2 rounded-full bg-white dark:bg-card" />}
+          </span>
+        </button>
+
+        {/* Pilih Bulan */}
+        <div className={`rounded-2xl border transition-all ${mode === "month" ? "border-primary bg-primary/5 p-3.5 shadow-sm" : "border-border/60 p-3.5 hover:border-border"}`}>
+          <button
+            type="button"
+            onClick={() => setMode("month")}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <span className="text-sm font-semibold text-foreground">{t("rangePickMonth")}</span>
+            <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${
+              mode === "month" ? "border-primary bg-primary" : "border-muted-foreground/30"
+            }`}>
+              {mode === "month" && <span className="size-2 rounded-full bg-white dark:bg-card" />}
+            </span>
+          </button>
+          {mode === "month" && (
+            <div className="relative mt-3">
+              <select
+                aria-label={t("rangePickMonthLabel")}
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-border bg-card px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+              >
+                {monthOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-card text-foreground">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+
+        {/* Pilih Tanggal */}
+        <div className={`rounded-2xl border transition-all ${mode === "dates" ? "border-primary bg-primary/5 p-3.5 shadow-sm" : "border-border/60 p-3.5 hover:border-border"}`}>
+          <button
+            type="button"
+            onClick={() => setMode("dates")}
+            className="flex w-full items-center justify-between text-left"
+          >
+            <span className="text-sm font-semibold text-foreground">{t("rangePickDate")}</span>
+            <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${
+              mode === "dates" ? "border-primary bg-primary" : "border-muted-foreground/30"
+            }`}>
+              {mode === "dates" && <span className="size-2 rounded-full bg-white dark:bg-card" />}
+            </span>
+          </button>
+          {mode === "dates" && (
+            <div className="mt-3 space-y-2.5 pt-1">
+              <div>
+                <Label>{t("rangeFromLabel")}</Label>
+                <DateInput label={t("rangeFromLabel")} value={from} onChange={setFrom} />
+              </div>
+              <div>
+                <Label>{t("rangeToLabel")}</Label>
+                <DateInput label={t("rangeToLabel")} value={to} min={from} onChange={setTo} />
+              </div>
+              {invalid && <p role="alert" className="text-xs font-semibold text-danger">{t("rangeInvalid")}</p>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Button className="mt-6 h-12 w-full text-sm font-bold shadow-md shadow-primary/20" disabled={mode === "dates" && (!from || !to || invalid)} onClick={apply}>
+        {t("rangeApplyBtn")}
+      </Button>
     </SheetFrame>
   );
 }
