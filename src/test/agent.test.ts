@@ -39,7 +39,7 @@ type Scenario = { name: string; lang: "en" | "id"; question: string; data: () =>
 type Result = { events: AgentEvent[]; intent?: string; tools: string[]; proposals: Extract<AgentEvent, { type: "proposal" }>["proposal"][]; metrics: Record<string, number>; answer: string; blocked?: string | undefined };
 
 async function run(s: Scenario): Promise<Result> {
-  const req = new Request("https://fintar.test/api/agent", { method: "POST", headers: { "content-type": "application/json", origin: "https://fintar.test", "x-real-ip": "10.1.1.1" }, body: JSON.stringify({ question: s.question, lang: s.lang, ...s.data() }) });
+  const req = new Request("https://bigood.test/api/agent", { method: "POST", headers: { "content-type": "application/json", origin: "https://bigood.test", "x-real-ip": "10.1.1.1" }, body: JSON.stringify({ question: s.question, lang: s.lang, ...s.data() }) });
   const res = await handleAgent(req);
   const events = (await res.text()).trim().split("\n").map((l) => JSON.parse(l) as AgentEvent);
   const r: Result = { events, tools: [], proposals: [], metrics: {}, answer: "" };
@@ -247,7 +247,7 @@ function writeEvidence(rows: { s: Scenario; r: Result; ok: boolean; why?: string
 describe("loop agen dengan model AI (respons Gemini tiruan)", () => {
   const fetchMock = vi.fn<typeof fetch>();
   const gemini = (parts: unknown[]) => new Response(JSON.stringify({ candidates: [{ content: { role: "model", parts }, finishReason: "STOP" }] }), { status: 200 });
-  const ask = (question: string) => handleAgent(new Request("https://fintar.test/api/agent", { method: "POST", headers: { "content-type": "application/json", origin: "https://fintar.test", "x-real-ip": "10.2.2.2" }, body: JSON.stringify({ question, lang: "en", ...tight() }) }));
+  const ask = (question: string) => handleAgent(new Request("https://bigood.test/api/agent", { method: "POST", headers: { "content-type": "application/json", origin: "https://bigood.test", "x-real-ip": "10.2.2.2" }, body: JSON.stringify({ question, lang: "en", ...tight() }) }));
   const events = async (res: Response) => (await res.text()).trim().split("\n").map((l) => JSON.parse(l) as AgentEvent);
 
   beforeEach(() => {

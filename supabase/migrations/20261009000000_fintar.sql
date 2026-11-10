@@ -1,5 +1,5 @@
 -- =============================================================================
--- FinTar database (Supabase / PostgreSQL)
+-- Bigood (formerly FinTar) database (Supabase / PostgreSQL)
 --
 -- Jalankan sekali di Supabase Dashboard > SQL Editor > New query > Run.
 -- Aman dijalankan ulang.

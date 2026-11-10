@@ -10,15 +10,15 @@ import { handleScan } from "@/lib/scan.server";
 vi.mock("@/lib/env", () => ({ cloudEnabled: false, supabaseUrl: "", supabaseAnonKey: "" }));
 
 const chat = (question: string, headers: Record<string, string> = {}, extra = "") =>
-  new Request("https://fintar.test/api/chat", {
+  new Request("https://bigood.test/api/chat", {
     method: "POST",
-    headers: { "content-type": "application/json", origin: "https://fintar.test", "x-real-ip": "10.0.0.1", ...headers },
+    headers: { "content-type": "application/json", origin: "https://bigood.test", "x-real-ip": "10.0.0.1", ...headers },
     body: JSON.stringify({ messages: [{ id: "1", role: "user", parts: [{ type: "text", text: question }] }], ledger: [], extra }),
   });
 const scan = (headers: Record<string, string> = {}) =>
-  new Request("https://fintar.test/api/scan", {
+  new Request("https://bigood.test/api/scan", {
     method: "POST",
-    headers: { "content-type": "application/json", origin: "https://fintar.test", "x-real-ip": "10.0.0.2", ...headers },
+    headers: { "content-type": "application/json", origin: "https://bigood.test", "x-real-ip": "10.0.0.2", ...headers },
     body: JSON.stringify({ image: "data:image/png;base64,AAAA" }),
   });
 

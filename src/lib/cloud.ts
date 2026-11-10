@@ -189,7 +189,7 @@ export async function signIn(email: string, password: string): Promise<string | 
 // Rules for new accounts, matching Supabase's "lowercase, uppercase letters, digits and symbols"
 // setting (same symbol set) so the checklist and the server agree. Sign-in keeps accepting
 // older passwords made under the earlier rules.
-const commonPasswords = new Set(["password1!", "password123!", "p@ssw0rd", "p@ssw0rd1", "p@ssword1", "qwerty123!", "admin123!", "bismillah1!", "indonesia1!", "rahasia123!", "katasandi1!", "fintar123!", "welcome1!", "abcd1234!"]);
+const commonPasswords = new Set(["password1!", "password123!", "p@ssw0rd", "p@ssw0rd1", "p@ssword1", "qwerty123!", "admin123!", "bismillah1!", "indonesia1!", "rahasia123!", "katasandi1!", "fintar123!", "bigood123!", "welcome1!", "abcd1234!"]);
 export const passwordChecks = (pw: string) => ({
   length: pw.length >= 8,
   lower: /[a-z]/.test(pw),
