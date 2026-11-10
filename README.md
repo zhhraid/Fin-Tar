@@ -1,6 +1,6 @@
 # Bigood
 
-**Bigood is an AI finance agent for small business owners (Indonesian UMKM).** Built for the 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Live: <https://fin-tar-seven.vercel.app>
+**Bigood is an AI finance agent for small business owners (Indonesian UMKM).** Built for the 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Live: <https://fin-tar-ux1f.vercel.app>
 
 Its agent, **Finix**, completes real financial tasks on the owner's own records:
 
