@@ -12,7 +12,7 @@ import type { Metric, Proposal } from "@/lib/agent/tools";
 import type { AgentEvent, AgentStep, Intent } from "@/lib/agent/types";
 import finixMark from "@/assets/finix-mark.png";
 
-// Finix, the FinTar finance agent. Each question is one agent run, streamed from
+// Finix, the Bigood finance agent. Each question is one agent run, streamed from
 // /api/agent: intent -> plan -> tool calls (with tier) -> measured impact -> answer ->
 // proposals. Proposals change nothing until the user approves them here; large amounts and
 // financing applications also need the PIN. Every run and decision goes to the activity log.

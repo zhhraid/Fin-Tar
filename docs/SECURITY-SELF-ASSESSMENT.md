@@ -1,6 +1,6 @@
-# FinTar: Security Self-Assessment
+# Bigood: Security Self-Assessment
 
-Scope: the Finix finance agent and the FinTar app (2026 FinTechathon, Topic E). This report covers the permission-tier implementation, the other security controls, and the known-risk list. Each control names the code that implements it and the test that checks it. (A longer Indonesian version with the UU PDP / OJK compliance mapping is in [SECURITY.md](SECURITY.md).)
+Scope: the Finix finance agent and the Bigood app (2026 FinTechathon, Topic E). This report covers the permission-tier implementation, the other security controls, and the known-risk list. Each control names the code that implements it and the test that checks it. (A longer Indonesian version with the UU PDP / OJK compliance mapping is in [SECURITY.md](SECURITY.md).)
 
 ## 1. Permission tiers
 

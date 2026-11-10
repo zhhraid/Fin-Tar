@@ -3,7 +3,7 @@ import { suggestCategory } from "../csv";
 import { categoryLabel, dateInputValue, expenseCategories, forecastCash, getCreditProfile, incomeCategories, openPlanned, rollingDays, rp, summarize, type Category, type Planned, type Profile, type Tx } from "../financials";
 import { healthyCap, lenderName, lenders, rankLenders } from "../scoring";
 
-// The FinTar agent's tools. Every tool has a permission tier (PRD section 8):
+// The Bigood agent's tools. Every tool has a permission tier (PRD section 8):
 //   T0 read     runs automatically
 //   T1 suggest  runs automatically, always returns its reasons
 //   T2 act      never runs here: it returns a *proposal* that the user approves or rejects

@@ -1,10 +1,10 @@
-# FinTar
+# Bigood
 
-**FinTar is an AI finance agent for small business owners (Indonesian UMKM).** Built for the 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Live: <https://fin-tar-seven.vercel.app>
+**Bigood is an AI finance agent for small business owners (Indonesian UMKM).** Built for the 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Live: <https://fin-tar-seven.vercel.app>
 
 Its agent, **Finix**, completes real financial tasks on the owner's own records:
 
-| Requirement | In FinTar |
+| Requirement | In Bigood |
 |---|---|
 | Intent understanding | Names the task (cash health, cost analysis, financing, record a transaction, overview) and shows it |
 | Task planning | Shows an ordered plan, then chains tools, using each result to decide the next step |
@@ -43,7 +43,7 @@ All lenders and insurance products are simulated; no money moves. Final financin
 
 Aplikasi keuangan untuk UMKM (PWA, mobile-first): catat pemasukan dan pengeluaran, pindai struk, lihat laporan keuangan otomatis, tanya Finix, lalu ajukan modal dari catatan yang sama.
 
-Repositori ini adalah gabungan dua versi FinTar. Spesifikasi produk ada di [docs/PRD.md](docs/PRD.md). Antarmuka tersedia dalam bahasa Inggris dan Indonesia, mengikuti bahasa browser (bisa diganti di Profil).
+Repositori ini adalah gabungan dua versi Bigood. Spesifikasi produk ada di [docs/PRD.md](docs/PRD.md). Antarmuka tersedia dalam bahasa Inggris dan Indonesia, mengikuti bahasa browser (bisa diganti di Profil).
 
 | Fitur | Keterangan |
 |---|---|
@@ -71,7 +71,7 @@ Tanpa mengisi `.env`, aplikasi berjalan dalam **mode perangkat**: data tersimpan
 
 ## Supabase: akun dan penyimpanan data
 
-Supabase adalah layanan database (PostgreSQL) yang sekaligus menyediakan login. FinTar memakainya untuk tiga hal: mendaftarkan dan memasukkan pengguna, menyimpan data tiap usaha di server, dan menjaga agar tiap pengguna hanya bisa membaca datanya sendiri.
+Supabase adalah layanan database (PostgreSQL) yang sekaligus menyediakan login. Bigood memakainya untuk tiga hal: mendaftarkan dan memasukkan pengguna, menyimpan data tiap usaha di server, dan menjaga agar tiap pengguna hanya bisa membaca datanya sendiri.
 
 Penjagaan itu dilakukan di database lewat Row Level Security (RLS), bukan di aplikasi. Karena itu kunci `anon` boleh berada di browser: tanpa login, kunci itu tidak bisa membaca apa pun.
 

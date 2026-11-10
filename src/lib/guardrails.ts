@@ -30,9 +30,9 @@ export function forbiddenRequest(text: string): ForbiddenKind | null {
 
 export function refusalText(kind: ForbiddenKind, lang: "id" | "en" = "id"): string {
   if (lang === "en") {
-    const what = { move_money: "move money", others_data: "read or change another person's data", send_data_out: "send your data outside FinTar" }[kind];
+    const what = { move_money: "move money", others_data: "read or change another person's data", send_data_out: "send your data outside Bigood" }[kind];
     return `I can't ${what}. This kind of action is always blocked for your safety, and the attempt is recorded in the Activity Log.\n\nI can still help you **check whether your cash is enough** or **plan the payment**. If you want a copy of your reports, use **Reports > PDF / Excel** yourself (it asks for your PIN).`;
   }
-  const what = { move_money: "memindahkan uang", others_data: "membaca atau mengubah data orang lain", send_data_out: "mengirim datamu ke luar FinTar" }[kind];
+  const what = { move_money: "memindahkan uang", others_data: "membaca atau mengubah data orang lain", send_data_out: "mengirim datamu ke luar Bigood" }[kind];
   return `Maaf, aku tidak bisa ${what}. Tindakan seperti ini selalu diblokir demi keamananmu, dan percobaannya dicatat di Log Aktivitas.\n\nAku tetap bisa bantu **mengecek apakah kas cukup** atau **menyusun rencana pembayarannya**. Kalau butuh salinan laporan, unduh sendiri lewat **Laporan > PDF / Excel** (perlu PIN).`;
 }

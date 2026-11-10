@@ -35,7 +35,7 @@ export function securityHeaders(production: boolean): Record<string, string> {
     "x-content-type-options": "nosniff",
     "x-frame-options": "DENY",
     "referrer-policy": "strict-origin-when-cross-origin",
-    // Camera only for FinTar itself (receipt scan); everything else off.
+    // Camera only for Bigood itself (receipt scan); everything else off.
     "permissions-policy": "camera=(self), microphone=(), geolocation=(), payment=(), usb=(), browsing-topics=()",
     "cross-origin-opener-policy": "same-origin",
   };

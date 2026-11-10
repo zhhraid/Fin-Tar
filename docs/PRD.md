@@ -1,4 +1,4 @@
-# FinTar: PRD v3.0
+# Bigood: PRD v3.0
 
 AI finance copilot for micro and small business owners (SMEs).
 Competition: 2026 FinTechathon, International Track, Topic E (SME Finance Copilot).
@@ -6,7 +6,7 @@ Platform: mobile-first web app (PWA). UI language: English (Indonesian optional)
 Demo business: "Viera Bakery" (bakery, Indonesia).
 
 ## 1. Overview
-FinTar is an AI agent for SME owners. It records transactions from receipt photos, forecasts cash flow and warns early, matches financing and insurance options with explainable scores, and drafts application documents. The agent acts only within permission tiers. Every sensitive action needs explicit user approval and is written to an audit log.
+Bigood is an AI agent for SME owners. It records transactions from receipt photos, forecasts cash flow and warns early, matches financing and insurance options with explainable scores, and drafts application documents. The agent acts only within permission tiers. Every sensitive action needs explicit user approval and is written to an audit log.
 
 ## 2. Problem, goals, metrics
 Problem: manual bookkeeping, sudden cash shortages, and hard-to-navigate financing and insurance choices.

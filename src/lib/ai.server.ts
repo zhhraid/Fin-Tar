@@ -200,7 +200,7 @@ export async function imageToJson(prompt: string, dataUrl: string, schema: Recor
 }
 
 /* ---------- Agent turns (tool calling) ---------- */
-// One model turn of the FinTar agent loop. The loop itself lives in agent.server.ts; this
+// One model turn of the Bigood agent loop. The loop itself lives in agent.server.ts; this
 // file only translates between a provider-neutral history and Claude / Gemini requests.
 // Assistant turns keep the provider's raw content (thinking blocks, Gemini thought
 // signatures) so it can be sent back unchanged within the same run.

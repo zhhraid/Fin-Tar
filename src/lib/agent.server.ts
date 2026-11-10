@@ -16,7 +16,7 @@ import { forbiddenRequest, refusalText } from "./guardrails";
 const MAX_TURNS = 8;
 const MAX_BODY = 2_000_000;
 
-const system = (lang: Lang, snap: Snapshot) => `You are Finix, the finance agent inside FinTar, an app for Indonesian micro and small business owners (UMKM). You complete financial tasks by calling tools.
+const system = (lang: Lang, snap: Snapshot) => `You are Finix, the finance agent inside Bigood, an app for Indonesian micro and small business owners (UMKM). You complete financial tasks by calling tools.
 
 How to work:
 1. Call plan_task first, once: name the user's intent and the steps you will take.

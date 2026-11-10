@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-// Cloud mode against an in-memory stand-in for Supabase. It checks FinTar's side of the
+// Cloud mode against an in-memory stand-in for Supabase. It checks Bigood's side of the
 // contract (which tables and columns are written, and that an account's rows load back).
 // It does not exercise real Row Level Security; that lives in supabase/migrations/.
 const fake = vi.hoisted(() => {
