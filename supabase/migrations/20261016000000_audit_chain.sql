@@ -1,5 +1,5 @@
 -- =============================================================================
--- FinTar: log aktivitas berantai hash (tamper-evident)
+-- Bigood (dulu FinTar): log aktivitas berantai hash (tamper-evident)
 --
 -- Jalankan sekali di Supabase SQL Editor setelah 20261009000000_fintar.sql.
 -- Aman dijalankan ulang.
