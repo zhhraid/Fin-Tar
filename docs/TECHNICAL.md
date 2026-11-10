@@ -1,12 +1,12 @@
-# FinTar: Technical Documentation
+# Bigood: Technical Documentation
 
-**FinTar** is an AI finance agent for micro and small business owners (Indonesian UMKM). Track: 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Its agent, **Finix**, completes real financial tasks on the owner's own records: it understands the request, plans steps, runs permission-tiered tools, proposes actions that only happen after the user approves, and reports the measurable impact.
+**Bigood** is an AI finance agent for micro and small business owners (Indonesian UMKM). Track: 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Its agent, **Finix**, completes real financial tasks on the owner's own records: it understands the request, plans steps, runs permission-tiered tools, proposes actions that only happen after the user approves, and reports the measurable impact.
 
 Live app: <https://fin-tar-seven.vercel.app> · Source: <https://github.com/zhhraid/Fin-Tar>
 
 ## 1. What the agent does
 
-| Capability | How FinTar implements it | Where |
+| Capability | How Bigood implements it | Where |
 |---|---|---|
 | Intent understanding | The model calls `plan_task` first and names one of six intents (`cash_health`, `cost_analysis`, `financing`, `record_transaction`, `overview`, `general`). Without a model, a bilingual (EN/ID) rule classifier does the same. Tier-3 requests are recognised before anything runs. | `src/lib/agent/tools.ts`, `src/lib/agent/rules.ts`, `src/lib/guardrails.ts` |
 | Task planning | The plan (ordered steps) is shown to the user before the tool calls; the model then chooses and chains tools, using each result to decide the next step (up to 8 turns). | `src/lib/agent.server.ts` |

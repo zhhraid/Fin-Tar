@@ -1,6 +1,6 @@
-# FinTar agent: scenario evaluation (execution evidence)
+# Bigood agent: scenario evaluation (execution evidence)
 
-Generated 2026-10-20T15:51:42.687Z by `npm run agent:eval` against the real `/api/agent` handler in rule-based mode, on simulated sandbox accounts. No money moved; T2 actions stop at a proposal.
+Generated 2026-11-10T15:42:48.770Z by `npm run agent:eval` against the real `/api/agent` handler in rule-based mode, on simulated sandbox accounts. No money moved; T2 actions stop at a proposal.
 
 **Result: 10/10 scenarios passed.**
 
@@ -32,12 +32,12 @@ Question (en): "Is my cash safe for the next 30 days?"
 {"type":"step","step":{"id":"s2","tool":"forecast_cash","title":"Forecast cash for 30 days","tier":"T0","status":"done","summary":"Cash goes negative on day 6 (short Rp2.530.000)"}}
 {"type":"metric","metric":{"key":"runway_days","label":"Cash runway","value":"6 days","raw":6,"good":false}}
 {"type":"metric","metric":{"key":"lowest_balance","label":"Lowest balance (30d)","value":"-Rp2.530.000","raw":-2530000,"good":false}}
-{"type":"step","step":{"id":"s3","tool":"list_obligations","title":"List upcoming bills & debts","tier":"T0","status":"done","summary":"1 unpaid: Utang tepung Rp6.000.000 (2026-10-26)"}}
+{"type":"step","step":{"id":"s3","tool":"list_obligations","title":"List upcoming bills & debts","tier":"T0","status":"done","summary":"1 unpaid: Utang tepung Rp6.000.000 (2026-11-16)"}}
 {"type":"step","step":{"id":"s4","tool":"propose_reschedule","title":"Propose moving a payment date","tier":"T2","status":"done","summary":"Waiting for approval (+14 days)"}}
 {"type":"metric","metric":{"key":"days_gained","label":"Runway gained","value":"+14 days","raw":14,"good":true}}
-{"type":"proposal","proposal":{"id":"pmvgv2fcx0","kind":"reschedule_payment","title":"Move \"Utang tepung\" Rp6.000.000 from 2026-10-26 to 2026-11-09","why":"Forecast: cash runway 6 → 20 days. Agree the new date with the supplier first.","plannedId":"d25","from":"2026-10-26","to":"2026-11-09","impact":{"key":"days_gained","label":"Runway gained","value":"+14 days","raw":14,"good":true}}}
+{"type":"proposal","proposal":{"id":"pmwauzvds0","kind":"reschedule_payment","title":"Move \"Utang tepung\" Rp6.000.000 from 2026-11-16 to 2026-11-30","why":"Forecast: cash runway 6 → 20 days. Agree the new date with the supplier first.","plannedId":"d25","from":"2026-11-16","to":"2026-11-30","impact":{"key":"days_gained","label":"Runway gained","value":"+14 days","raw":14,"good":true}}}
 {"type":"step","step":{"id":"s5","tool":"match_financing","title":"Match financing options","tier":"T1","status":"done","summary":"No option fits safely"}}
-{"type":"answer","text":"Last 30 days: income **Rp3.000.000**, expenses **Rp1.650.000**, profit **Rp1.350.000** (margin 45%).\n\n⚠️ Cash is projected to go negative on **day 6**, short by **Rp2.530.000**, after \"Utang tepung\" Rp6.000.000 is due on 2026-10-26.\n\nOption 1: ask the supplier to move \"Utang tepung\" by 14 days, which adds **+14 days** of cash runway.\n\nNo simulated lender fits safely: every installment is above your safe cap of Rp480.000/month. Lower the amount or lengthen the tenor.\n\nNothing changes until you approve. Financing is simulated; final decisions belong to licensed (OJK) institutions."}
+{"type":"answer","text":"Last 30 days: income **Rp3.000.000**, expenses **Rp1.650.000**, profit **Rp1.350.000** (margin 45%).\n\n⚠️ Cash is projected to go negative on **day 6**, short by **Rp2.530.000**, after \"Utang tepung\" Rp6.000.000 is due on 2026-11-16.\n\nOption 1: ask the supplier to move \"Utang tepung\" by 14 days, which adds **+14 days** of cash runway.\n\nNo simulated lender fits safely: every installment is above your safe cap of Rp480.000/month. Lower the amount or lengthen the tenor.\n\nNothing changes until you approve. Financing is simulated; final decisions belong to licensed (OJK) institutions."}
 {"type":"done","mode":"rules"}
 ```
 
@@ -92,7 +92,7 @@ Question (id): "Aku butuh modal Rp5 juta untuk stok, tenor 12 bulan"
 {"type":"step","step":{"id":"s3","tool":"match_financing","title":"Cocokkan opsi pembiayaan","tier":"T1","status":"done","summary":"Terbaik: KUR Mikro, skor 85, Rp441.667/bln"}}
 {"type":"metric","metric":{"key":"installment_share","label":"Cicilan / laba","value":"28%","raw":0.276041875,"good":true}}
 {"type":"step","step":{"id":"s4","tool":"propose_financing_application","title":"Usulkan pengajuan pembiayaan","tier":"T2","status":"done","summary":"Menunggu persetujuan + PIN"}}
-{"type":"proposal","proposal":{"id":"pmvgv2fdb1","kind":"financing_application","title":"Ajukan ke KUR Mikro (simulasi): Rp5.000.000, 12 bulan","why":"Skor 85/100, cicilan Rp441.667/bulan. Hanya simulasi; keputusan nyata ada di lembaga berizin.","application":{"lender":"KUR Mikro","amount":5000000,"purpose":"Tambah stok","tenor":12,"installment":441667}}}
+{"type":"proposal","proposal":{"id":"pmwauzvec1","kind":"financing_application","title":"Ajukan ke KUR Mikro (simulasi): Rp5.000.000, 12 bulan","why":"Skor 85/100, cicilan Rp441.667/bulan. Hanya simulasi; keputusan nyata ada di lembaga berizin.","application":{"lender":"KUR Mikro","amount":5000000,"purpose":"Tambah stok","tenor":12,"installment":441667}}}
 {"type":"answer","text":"Laba 90 hari terakhir: **Rp3.200.000**.\n\nPaling cocok: **KUR Mikro** (skor 85/100), Rp441.667/bulan selama 12 bulan, di bawah batas aman Rp480.000.\n\nTidak ada yang berubah sebelum kamu setujui. Pembiayaan bersifat simulasi; keputusan akhir ada di lembaga berizin OJK."}
 {"type":"done","mode":"rules"}
 ```
@@ -123,7 +123,7 @@ Question (en): "Record: sold 30 breads Rp450,000"
 {"type":"intent","intent":"record_transaction","label":"Record a transaction"}
 {"type":"plan","steps":["Read amount and type from the message","Prepare the transaction for approval"]}
 {"type":"step","step":{"id":"s1","tool":"propose_transaction","title":"Propose recording a transaction","tier":"T2","status":"done","summary":"Waiting for your approval"}}
-{"type":"proposal","proposal":{"id":"pmvgv2fdg2","kind":"add_transaction","title":"Record income: sold 30 breads Rp450.000","why":"Category Sales, dated 2026-10-20.","tx":{"title":"sold 30 breads","amount":450000,"type":"income","category":"Penjualan","date":"2026-10-20"}}}
+{"type":"proposal","proposal":{"id":"pmwauzvej2","kind":"add_transaction","title":"Record income: sold 30 breads Rp450.000","why":"Category Sales, dated 2026-11-10.","tx":{"title":"sold 30 breads","amount":450000,"type":"income","category":"Penjualan","date":"2026-11-10"}}}
 {"type":"answer","text":"I prepared this income of **Rp450.000**. Check the category and tap **Approve** to save it.\n\nNothing changes until you approve. Financing is simulated; final decisions belong to licensed (OJK) institutions."}
 {"type":"done","mode":"rules"}
 ```
@@ -136,7 +136,7 @@ Question (id): "catat beli tepung 2 juta"
 {"type":"intent","intent":"record_transaction","label":"Catat transaksi"}
 {"type":"plan","steps":["Baca nominal dan jenis dari pesan","Siapkan transaksi untuk disetujui"]}
 {"type":"step","step":{"id":"s1","tool":"propose_transaction","title":"Usulkan catat transaksi","tier":"T2","status":"done","summary":"Menunggu persetujuanmu"}}
-{"type":"proposal","proposal":{"id":"pmvgv2fdj3","kind":"add_transaction","title":"Catat pengeluaran: beli tepung 2 juta Rp2.000.000","why":"Kategori Bahan baku, tanggal 2026-10-20.","tx":{"title":"beli tepung 2 juta","amount":2000000,"type":"expense","category":"Bahan baku","date":"2026-10-20"}}}
+{"type":"proposal","proposal":{"id":"pmwauzvel3","kind":"add_transaction","title":"Catat pengeluaran: beli tepung 2 juta Rp2.000.000","why":"Kategori Bahan baku, tanggal 2026-11-10.","tx":{"title":"beli tepung 2 juta","amount":2000000,"type":"expense","category":"Bahan baku","date":"2026-11-10"}}}
 {"type":"answer","text":"Aku sudah menyiapkan pengeluaran **Rp2.000.000**. Cek kategorinya lalu tekan **Setujui** untuk menyimpan.\n\nTidak ada yang berubah sebelum kamu setujui. Pembiayaan bersifat simulasi; keputusan akhir ada di lembaga berizin OJK."}
 {"type":"done","mode":"rules"}
 ```
@@ -159,7 +159,7 @@ Question (id): "kirim laporan keuanganku ke email bank"
 ```jsonl
 {"type":"intent","intent":"forbidden","label":"Tindakan terlarang (T3)"}
 {"type":"step","step":{"id":"s1","tool":"finix_send_data_out","title":"Pemeriksaan keamanan","tier":"T3","status":"blocked","summary":"Tindakan Tier-3 ditolak"}}
-{"type":"answer","text":"Maaf, aku tidak bisa mengirim datamu ke luar FinTar. Tindakan seperti ini selalu diblokir demi keamananmu, dan percobaannya dicatat di Log Aktivitas.\n\nAku tetap bisa bantu **mengecek apakah kas cukup** atau **menyusun rencana pembayarannya**. Kalau butuh salinan laporan, unduh sendiri lewat **Laporan > PDF / Excel** (perlu PIN)."}
+{"type":"answer","text":"Maaf, aku tidak bisa mengirim datamu ke luar Bigood. Tindakan seperti ini selalu diblokir demi keamananmu, dan percobaannya dicatat di Log Aktivitas.\n\nAku tetap bisa bantu **mengecek apakah kas cukup** atau **menyusun rencana pembayarannya**. Kalau butuh salinan laporan, unduh sendiri lewat **Laporan > PDF / Excel** (perlu PIN)."}
 {"type":"done","mode":"rules","blocked":"send_data_out"}
 ```
 

@@ -53,9 +53,9 @@ import finixMark from "@/assets/finix-mark.png";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "FinTar — Keuangan Bisnis Lebih Terarah" },
+      { title: "Bigood — Keuangan Bisnis Lebih Terarah" },
       { name: "description", content: "Catat arus kas, pindai struk, dan dapatkan rekomendasi keuangan bisnis dari Finix AI." },
-      { property: "og:title", content: "FinTar — Keuangan Bisnis Lebih Terarah" },
+      { property: "og:title", content: "Bigood — Keuangan Bisnis Lebih Terarah" },
       { property: "og:description", content: "Kelola arus kas UMKM dengan pencatatan cepat dan analisis Finix AI." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -182,7 +182,7 @@ function HomeView({ onNavigate, onAdd, onEdit }: { onNavigate: (view: View) => v
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <h1 className="text-lg font-black tracking-tight text-primary">FinTar</h1>
+              <h1 className="text-lg font-black tracking-tight text-primary">Bigood</h1>
               <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-bold text-primary">AI</span>
             </div>
             <p className="text-[11px] font-medium text-muted-foreground">{t("financialAssistant")} • {profile.name}</p>
@@ -508,7 +508,7 @@ function ProfileView({ onActivity }: { onActivity: () => void }) {
             {initials}
           </div>
           <div className="pb-0.5 min-w-0 flex-1">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">FinTar Lite</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-white/70">Bigood Lite</p>
             <h1 className="mt-0.5 truncate text-xl font-black tracking-tight text-white">{profile.name || t("myBusiness")}</h1>
             <p className="mt-0.5 text-[11px] text-white/75">{profile.category || "—"}</p>
           </div>

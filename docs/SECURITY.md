@@ -1,6 +1,6 @@
-# FinTar: Keamanan, Kepatuhan & Mitigasi Risiko
+# Bigood: Keamanan, Kepatuhan & Mitigasi Risiko
 
-Dokumen ini menjelaskan bagaimana FinTar melindungi data keuangan pelaku UMKM, aturan apa yang diikuti, risiko yang tersisa, dan batasan yang perlu diketahui juri maupun pengguna. Setiap kontrol menyebut berkasnya dan test yang membuktikannya, supaya bisa diperiksa langsung.
+Dokumen ini menjelaskan bagaimana Bigood melindungi data keuangan pelaku UMKM, aturan apa yang diikuti, risiko yang tersisa, dan batasan yang perlu diketahui juri maupun pengguna. Setiap kontrol menyebut berkasnya dan test yang membuktikannya, supaya bisa diperiksa langsung.
 
 ## 1. Data yang dilindungi
 
@@ -17,7 +17,7 @@ Dokumen ini menjelaskan bagaimana FinTar melindungi data keuangan pelaku UMKM, a
 1. **Orang lain memakai HP pemilik yang sedang terbuka** lalu mengunduh atau menghapus laporan keuangan.
 2. **Pengguna lain mencoba membaca data usaha lain** lewat API Supabase.
 3. **Pihak luar menghabiskan kuota atau tagihan AI** dengan memanggil endpoint AI berulang kali.
-4. **Situs lain menyisipkan FinTar** dalam iframe (clickjacking) atau **menyusupkan skrip** (XSS).
+4. **Situs lain menyisipkan Bigood** dalam iframe (clickjacking) atau **menyusupkan skrip** (XSS).
 5. **Asisten AI disuruh bertindak berbahaya**, misalnya memindahkan uang, atau disusupi perintah lewat teks struk (prompt injection).
 6. **Riwayat aktivitas dipalsukan** untuk menutupi tindakan.
 7. **File ekspor yang berbahaya**: keterangan transaksi yang menjadi rumus saat dibuka di Excel.
@@ -49,15 +49,15 @@ Dokumen ini menjelaskan bagaimana FinTar melindungi data keuangan pelaku UMKM, a
 
 | Kontrol | Penjelasan | Berkas |
 |---|---|---|
-| Content-Security-Policy | Skrip hanya dari FinTar sendiri, tanpa `eval`. Koneksi hanya ke FinTar dan proyek Supabase. Tidak bisa dimuat di iframe situs lain (`frame-ancestors 'none'`). | `src/lib/security-headers.ts` |
-| Header lain | HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy` (kamera hanya untuk FinTar; mikrofon, lokasi, dan pembayaran dimatikan). | `src/lib/security-headers.ts`, `netlify.toml` |
+| Content-Security-Policy | Skrip hanya dari Bigood sendiri, tanpa `eval`. Koneksi hanya ke Bigood dan proyek Supabase. Tidak bisa dimuat di iframe situs lain (`frame-ancestors 'none'`). | `src/lib/security-headers.ts` |
+| Header lain | HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy` (kamera hanya untuk Bigood; mikrofon, lokasi, dan pembayaran dimatikan). | `src/lib/security-headers.ts`, `netlify.toml` |
 | Proteksi CSRF untuk server function | Bawaan TanStack Start, dipasang ulang secara eksplisit. | `src/start.ts` |
 
 Diuji pada build produksi (`npm run build && npm start`) dengan Chromium: semua header terkirim, permintaan lintas situs ke `/api/chat` mendapat 403, dan alur utama (laporan, unduh PDF dengan PIN, Finix, pindai) berjalan tanpa diblokir CSP. Satu-satunya laporan CSP berasal dari pustaka validasi `zod`, yang mengecek apakah `eval` diizinkan lalu otomatis memakai jalur tanpa `eval`.
 
 ### 3.4 Asisten AI (Finix) dan izin bertingkat
 
-| Tier | Contoh | Aturan di FinTar |
+| Tier | Contoh | Aturan di Bigood |
 |---|---|---|
 | T0 Baca | Bertanya ke Finix, melihat ringkasan | Otomatis, dicatat |
 | T1 Saran | Skor pembiayaan, target omzet | Otomatis, selalu dengan alasan |
@@ -87,7 +87,7 @@ Diuji di PostgreSQL 16 (`supabase/migrations/20261016000000_audit_chain.sql`): d
 
 ### UU No. 27 Tahun 2022 tentang Pelindungan Data Pribadi (PDP)
 
-| Prinsip / hak | Penerapan di FinTar | Status |
+| Prinsip / hak | Penerapan di Bigood | Status |
 |---|---|---|
 | Dasar pemrosesan: persetujuan | Izin pemrosesan AI wajib sebelum fitur AI aktif, dicek juga di server, dan bisa dicabut kapan saja. Riwayat izin hanya bisa ditambah. | Ada |
 | Hak menghapus | "Hapus semua data saya" | Ada |
@@ -100,7 +100,7 @@ Diuji di PostgreSQL 16 (`supabase/migrations/20261016000000_audit_chain.sql`): d
 
 ### OJK dan layanan keuangan
 
-- FinTar adalah alat pencatatan dan edukasi keuangan, **bukan** pemberi pinjaman, penyelenggara P2P lending, atau perusahaan asuransi. FinTar tidak menyalurkan dana, tidak menerbitkan polis, dan tidak memutuskan kelayakan kredit.
+- Bigood adalah alat pencatatan dan edukasi keuangan, **bukan** pemberi pinjaman, penyelenggara P2P lending, atau perusahaan asuransi. Bigood tidak menyalurkan dana, tidak menerbitkan polis, dan tidak memutuskan kelayakan kredit.
 - Semua lembaga, bunga, dan paket asuransi adalah **data simulasi**. Setiap layar pembiayaan dan asuransi menampilkan banner "Simulasi • bukan layanan keuangan sungguhan" dan arahan untuk mengecek legalitas lembaga di ojk.go.id atau Kontak OJK 157.
 - Tahap status pengajuan diberi label "(simulasi)". Tahap terakhir ditulis sebagai contoh hasil, tanpa dana yang cair.
 

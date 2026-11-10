@@ -226,7 +226,7 @@ describe("eksekusi aman", () => {
 
 function writeEvidence(rows: { s: Scenario; r: Result; ok: boolean; why?: string }[], passed: number) {
   const lines = [
-    "# FinTar agent: scenario evaluation (execution evidence)",
+    "# Bigood agent: scenario evaluation (execution evidence)",
     "",
     `Generated ${new Date().toISOString()} by \`npm run agent:eval\` against the real \`/api/agent\` handler in rule-based mode, on simulated sandbox accounts. No money moved; T2 actions stop at a proposal.`,
     "",

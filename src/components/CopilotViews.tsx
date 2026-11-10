@@ -279,8 +279,8 @@ export function InsuranceView({ onBack }: { onBack: () => void }) {
         <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{t("insuranceIntro")}</p>
         <ol className="mt-3 space-y-1.5 rounded-2xl bg-muted p-4 text-xs leading-relaxed text-muted-foreground">
           <li><strong className="text-foreground">1.</strong> {lang === "en" ? "Select risks of concern and your shop asset value." : "Pilih risiko yang kamu khawatirkan dan nilai aset tokomu."}</li>
-          <li><strong className="text-foreground">2.</strong> {lang === "en" ? "FinTar matches packages and compares premiums against your net profit." : "FinTar mencocokkan paket dan membandingkan preminya dengan labamu."}</li>
-          <li><strong className="text-foreground">3.</strong> {lang === "en" ? "Select a package, then FinTar prepares your data for providers (simulated)." : "Pilih paket, lalu FinTar meneruskan data usahamu ke penyedia (simulasi)."}</li>
+          <li><strong className="text-foreground">2.</strong> {lang === "en" ? "Bigood matches packages and compares premiums against your net profit." : "Bigood mencocokkan paket dan membandingkan preminya dengan labamu."}</li>
+          <li><strong className="text-foreground">3.</strong> {lang === "en" ? "Select a package, then Bigood prepares your data for providers (simulated)." : "Pilih paket, lalu Bigood meneruskan data usahamu ke penyedia (simulasi)."}</li>
         </ol>
         <Label>{t("risksToProtect")}</Label>
         <div className="grid grid-cols-2 gap-2">

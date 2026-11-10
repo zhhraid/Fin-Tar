@@ -230,8 +230,8 @@ export const translations = {
     activityLogLabel: "Log aktivitas & hapus data",
     activityLogHelp: "Lihat jejak AI, unduh log, atau hapus semua datamu",
     appSection: "Aplikasi",
-    installPwaBtn: "Pasang FinTar di layar utama",
-    installPwaHelp: 'Untuk memasang FinTar seperti aplikasi, buka menu browser lalu pilih "Tambahkan ke layar utama".',
+    installPwaBtn: "Pasang Bigood di layar utama",
+    installPwaHelp: 'Untuk memasang Bigood seperti aplikasi, buka menu browser lalu pilih "Tambahkan ke layar utama".',
     resetSampleConfirmMsg: "Ganti semua transaksi dan kewajiban dengan data contoh? Catatanmu saat ini akan hilang.",
 
     // Entry Sheet & CSV Sheet
@@ -300,10 +300,10 @@ export const translations = {
     downloadPdfProposal: "Unduh proposal (PDF)",
     agreeShareLoanInfo: "Saya setuju ringkasan dan laporan keuangan di atas dibagikan ke {lender} untuk menilai pengajuan ini.",
     sendProposalBtn: "Kirim proposal",
-    simulatedLoanDisclaimer: "Simulasi: FinTar belum terhubung ke lembaga keuangan, jadi tidak ada data yang benar-benar dikirim. Keputusan pembiayaan ada di lembaga berizin.",
+    simulatedLoanDisclaimer: "Simulasi: Bigood belum terhubung ke lembaga keuangan, jadi tidak ada data yang benar-benar dikirim. Keputusan pembiayaan ada di lembaga berizin.",
     loanStatusEyebrow: "STATUS PENGAJUAN",
     simBannerTitle: "Simulasi • bukan layanan keuangan sungguhan",
-    ojkDisclaimer: "FinTar adalah alat pencatatan dan edukasi keuangan, bukan pemberi pinjaman atau perusahaan asuransi. FinTar tidak menyalurkan dana, tidak menerbitkan polis, dan tidak memutuskan kelayakan kredit. Pinjaman dan asuransi sungguhan hanya dari lembaga berizin dan diawasi OJK; cek legalitasnya di ojk.go.id atau Kontak OJK 157.",
+    ojkDisclaimer: "Bigood adalah alat pencatatan dan edukasi keuangan, bukan pemberi pinjaman atau perusahaan asuransi. Bigood tidak menyalurkan dana, tidak menerbitkan polis, dan tidak memutuskan kelayakan kredit. Pinjaman dan asuransi sungguhan hanya dari lembaga berizin dan diawasi OJK; cek legalitasnya di ojk.go.id atau Kontak OJK 157.",
     loanStatusSimulation: "Simulasi: status ini berjalan otomatis untuk menunjukkan alurnya. Belum ada pengajuan sungguhan dan tidak ada dana yang cair.",
     newLoanBtn: "Buat pengajuan baru",
     cancelLoanBtn: "Batalkan pengajuan",
@@ -319,8 +319,8 @@ export const translations = {
     insuranceTitle: "Lindungi usahamu",
     insuranceIntro: "Satu musibah bisa menghabiskan modal yang dikumpulkan bertahun-tahun. Dengan premi kecil tiap bulan, kerugian besar ditanggung perusahaan asuransi.",
     insStep1: "1. Pilih risiko yang kamu khawatirkan dan nilai aset tokomu.",
-    insStep2: "2. FinTar mencocokkan paket dan membandingkan preminya dengan labamu.",
-    insStep3: "3. Pilih paket, lalu FinTar meneruskan data usahamu ke penyedia (simulasi).",
+    insStep2: "2. Bigood mencocokkan paket dan membandingkan preminya dengan labamu.",
+    insStep3: "3. Pilih paket, lalu Bigood meneruskan data usahamu ke penyedia (simulasi).",
     risksToProtect: "Risiko yang ingin dilindungi",
     riskFire: "Kebakaran & bencana",
     riskTheft: "Pencurian",
@@ -343,7 +343,7 @@ export const translations = {
     whatIsNotCovered: "Belum ditanggung paket ini",
     agreeShareInsuranceInfo: "Saya setuju profil usaha dan nilai aset di atas diteruskan ke penyedia asuransi untuk menyiapkan penawaran.",
     applyThisPackageBtn: "Ajukan paket ini",
-    insuranceDisclaimer: "Simulasi: FinTar belum terhubung ke perusahaan asuransi. Tidak ada polis yang terbit dan tidak ada premi yang ditagih.",
+    insuranceDisclaimer: "Simulasi: Bigood belum terhubung ke perusahaan asuransi. Tidak ada polis yang terbit dan tidak ada premi yang ditagih.",
     appliedPackageTitle: "Paket yang kamu ajukan",
     appliedOn: "Diajukan",
     assetsProtected: "aset",
@@ -449,7 +449,7 @@ export const translations = {
 
     // Consent Gate
     allowAiForTitle: "Izinkan AI untuk {feature}?",
-    consentPdpNotice: "FinTar baru mengirim catatanmu ke layanan AI setelah kamu setuju, sesuai prinsip UU Pelindungan Data Pribadi.",
+    consentPdpNotice: "Bigood baru mengirim catatanmu ke layanan AI setelah kamu setuju, sesuai prinsip UU Pelindungan Data Pribadi.",
     consentPoint1: "Yang dikirim: ringkasan transaksi, atau foto struk yang kamu pindai.",
     consentPoint2: "AI hanya memberi saran. Tidak ada yang tersimpan tanpa konfirmasimu.",
     consentPoint3: "Izin bisa dicabut kapan saja di Profil.",
@@ -484,7 +484,7 @@ export const translations = {
     statusBlocked: "Diblokir",
 
     // Auth Screen
-    authTagline: "FinTar",
+    authTagline: "Bigood",
     signInHeading: "Masuk ke akunmu",
     signUpHeading: "Buat akun usaha",
     signInDesc: "Catatan keuanganmu tersimpan aman di akun ini.",
@@ -524,7 +524,7 @@ export const translations = {
     nextOnboardingBtn: "Lanjut",
     laterOnboardingBtn: "Nanti saja",
     openProfileOnboardingBtn: "Isi di Profil",
-    finishOnboardingBtn: "Mulai pakai FinTar",
+    finishOnboardingBtn: "Mulai pakai Bigood",
   },
   en: {
     // Navigation
@@ -711,8 +711,8 @@ export const translations = {
     activityLogLabel: "Activity log & data deletion",
     activityLogHelp: "Inspect AI audit trail, download logs, or delete all data",
     appSection: "Application",
-    installPwaBtn: "Install FinTar on home screen",
-    installPwaHelp: 'To install FinTar as an app, open your browser menu and choose "Add to Home screen".',
+    installPwaBtn: "Install Bigood on home screen",
+    installPwaHelp: 'To install Bigood as an app, open your browser menu and choose "Add to Home screen".',
     resetSampleConfirmMsg: "Replace all current transactions and obligations with sample data? Your current records will be lost.",
 
     // Entry Sheet & CSV Sheet
@@ -781,10 +781,10 @@ export const translations = {
     downloadPdfProposal: "Download proposal (PDF)",
     agreeShareLoanInfo: "I agree to share the business summary and financial reports above with {lender} for eligibility evaluation.",
     sendProposalBtn: "Submit proposal",
-    simulatedLoanDisclaimer: "Simulated: FinTar is not directly connected to financial institutions. No real data is transmitted. Final approval belongs to licensed lenders.",
+    simulatedLoanDisclaimer: "Simulated: Bigood is not directly connected to financial institutions. No real data is transmitted. Final approval belongs to licensed lenders.",
     loanStatusEyebrow: "APPLICATION STATUS",
     simBannerTitle: "Simulation • not a real financial service",
-    ojkDisclaimer: "FinTar is a bookkeeping and financial-education tool, not a lender or an insurer. It does not disburse funds, issue policies, or decide creditworthiness. Real loans and insurance come only from institutions licensed and supervised by Indonesia's OJK; check them at ojk.go.id or OJK contact 157.",
+    ojkDisclaimer: "Bigood is a bookkeeping and financial-education tool, not a lender or an insurer. It does not disburse funds, issue policies, or decide creditworthiness. Real loans and insurance come only from institutions licensed and supervised by Indonesia's OJK; check them at ojk.go.id or OJK contact 157.",
     loanStatusSimulation: "Simulated: this workflow executes automatically to demonstrate the lifecycle. No real submission or disbursement occurred.",
     newLoanBtn: "Create new application",
     cancelLoanBtn: "Cancel application",
@@ -800,8 +800,8 @@ export const translations = {
     insuranceTitle: "Protect your business",
     insuranceIntro: "A single unexpected event can wipe out years of accumulated capital. With a small monthly premium, major losses are covered by the insurer.",
     insStep1: "1. Select business risks of concern and total shop asset value.",
-    insStep2: "2. FinTar matches packages and compares premiums against your net profit.",
-    insStep3: "3. Choose a package, and FinTar prepares your application (simulated).",
+    insStep2: "2. Bigood matches packages and compares premiums against your net profit.",
+    insStep3: "3. Choose a package, and Bigood prepares your application (simulated).",
     risksToProtect: "Risks you want to protect",
     riskFire: "Fire & disaster",
     riskTheft: "Theft",
@@ -824,7 +824,7 @@ export const translations = {
     whatIsNotCovered: "Not covered in this plan",
     agreeShareInsuranceInfo: "I agree to share my business profile and asset valuation with insurance providers to prepare quotation.",
     applyThisPackageBtn: "Apply for this plan",
-    insuranceDisclaimer: "Simulated: FinTar is not directly connected to insurers. No policy is issued and no actual premium is billed.",
+    insuranceDisclaimer: "Simulated: Bigood is not directly connected to insurers. No policy is issued and no actual premium is billed.",
     appliedPackageTitle: "Your applied package",
     appliedOn: "Applied on",
     assetsProtected: "assets",
@@ -930,7 +930,7 @@ export const translations = {
 
     // Consent Gate
     allowAiForTitle: "Allow AI for {feature}?",
-    consentPdpNotice: "FinTar sends data to AI services only with your explicit consent, adhering to privacy protection principles.",
+    consentPdpNotice: "Bigood sends data to AI services only with your explicit consent, adhering to privacy protection principles.",
     consentPoint1: "Data transmitted: transaction summaries or uploaded receipt photos.",
     consentPoint2: "AI only provides suggestions. No records are saved without your confirmation.",
     consentPoint3: "Consent can be revoked anytime in Profile.",
@@ -965,7 +965,7 @@ export const translations = {
     statusBlocked: "Blocked",
 
     // Auth Screen
-    authTagline: "FinTar",
+    authTagline: "Bigood",
     signInHeading: "Sign in to your account",
     signUpHeading: "Create business account",
     signInDesc: "Your financial records are safely stored in your account.",
@@ -1005,7 +1005,7 @@ export const translations = {
     nextOnboardingBtn: "Next",
     laterOnboardingBtn: "Maybe later",
     openProfileOnboardingBtn: "Set up in Profile",
-    finishOnboardingBtn: "Start using FinTar",
+    finishOnboardingBtn: "Start using Bigood",
   },
 } as const;
 
