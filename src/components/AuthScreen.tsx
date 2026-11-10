@@ -63,7 +63,7 @@ export function AuthScreen() {
             </div>
           </div>
           <h1 className="text-2xl font-black tracking-tight text-foreground flex items-center justify-center gap-1.5">
-            Fin<span className="text-primary">Tar</span>
+            <span>Bi<span className="text-primary">good</span></span>
             <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20">
               <Sparkles size={10} /> Copilot
             </span>
