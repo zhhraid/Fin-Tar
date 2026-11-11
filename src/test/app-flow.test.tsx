@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Route } from "@/routes/index";
+import { Route, setHomeFinancingCardsVisible, SHOW_HOME_FINANCING_CARDS } from "@/routes/index";
 
 // Device mode, whatever the developer's own .env says.
 vi.mock("@/lib/env", () => ({ cloudEnabled: false, supabaseUrl: "", supabaseAnonKey: "" }));
@@ -14,6 +14,10 @@ const now = new Date();
 const today = `${String(now.getDate()).padStart(2, "0")}/${String(now.getMonth() + 1).padStart(2, "0")}/${now.getFullYear()}`;
 
 describe("alur utama Bigood", () => {
+  afterEach(() => {
+    setHomeFinancingCardsVisible(false);
+  });
+
   it("mencatat pemasukan, menebak kategori, lalu mengubah dan menghapusnya", () => {
     render(<App />);
     expect(screen.getByText("Saldo kas saat ini")).toBeInTheDocument();
@@ -99,6 +103,7 @@ describe("alur utama Bigood", () => {
   });
 
   it("memberi alasan skor, mengirim proposal, dan mencatatnya di log aktivitas", () => {
+    setHomeFinancingCardsVisible(true);
     render(<App />);
     fireEvent.click(screen.getByText("Ajukan Modal"));
     expect(screen.getAllByText("Alasan skor").length).toBeGreaterThan(0);
@@ -122,6 +127,7 @@ describe("alur utama Bigood", () => {
   });
 
   it("mengajukan paket asuransi, menjadwalkan preminya, lalu membatalkan", () => {
+    setHomeFinancingCardsVisible(true);
     render(<App />);
     fireEvent.click(screen.getByText("Asuransi Toko"));
     fireEvent.click(screen.getAllByRole("button", { name: "Pilih paket" })[0]!);
@@ -177,8 +183,13 @@ describe("alur utama Bigood", () => {
 
     press("Home");
     expect(screen.getByText("Current cash balance")).toBeInTheDocument();
-    expect(screen.getByText("Funding Match")).toBeInTheDocument();
-    expect(screen.getByText("Shop Insurance")).toBeInTheDocument();
+    if (SHOW_HOME_FINANCING_CARDS) {
+      expect(screen.getByText("Funding Match")).toBeInTheDocument();
+      expect(screen.getByText("Shop Insurance")).toBeInTheDocument();
+    } else {
+      expect(screen.getByText("Income this month")).toBeInTheDocument();
+      expect(screen.getByText("Expense this month")).toBeInTheDocument();
+    }
 
     press("Reports");
     expect(screen.getByText("FINANCIAL REPORTS")).toBeInTheDocument();
