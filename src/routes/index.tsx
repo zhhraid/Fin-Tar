@@ -156,6 +156,17 @@ function FinixGate({ children }: { children: ReactNode }) {
   return <main className="pb-6 pt-6"><ConsentGate feature={t("finixConsentFeature")}>{children}</ConsentGate></main>;
 }
 
+/**
+ * Kontrol tampilan fitur "Funding Match" (Ajukan Modal) dan "Shop Insurance" (Asuransi Toko) di Beranda.
+ * Set `false` untuk menyembunyikan dari UI pengguna (default saat ini).
+ * Ubah menjadi `true` jika suatu saat ingin memunculkan kembali kedua menu tersebut.
+ */
+export let SHOW_HOME_FINANCING_CARDS = false;
+
+export function setHomeFinancingCardsVisible(visible: boolean) {
+  SHOW_HOME_FINANCING_CARDS = visible;
+}
+
 function HomeView({ onNavigate, onAdd, onEdit }: { onNavigate: (view: View) => void; onAdd: (type: Tx["type"]) => void; onEdit: (tx: Tx) => void }) {
   const ledger = useLedger();
   const profile = useProfile();
@@ -233,26 +244,28 @@ function HomeView({ onNavigate, onAdd, onEdit }: { onNavigate: (view: View) => v
         </div>
       </section>
 
-      <section className="mt-4 grid grid-cols-2 gap-2.5 px-5">
-        <button onClick={() => onNavigate("loan")} className="group flex items-center gap-3 rounded-2xl border border-border/80 bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md active:scale-[0.98]">
-          <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-500/10 text-emerald-600 transition-colors group-hover:bg-emerald-500/20">
-            <Landmark size={18} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-foreground">{t("applyFunding")}</p>
-            <p className="truncate text-[10px] text-muted-foreground">{t("matchFinancing")}</p>
-          </div>
-        </button>
-        <button onClick={() => onNavigate("insurance")} className="group flex items-center gap-3 rounded-2xl border border-border/80 bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md active:scale-[0.98]">
-          <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
-            <ShieldCheck size={18} />
-          </div>
-          <div className="min-w-0">
-            <p className="text-xs font-bold text-foreground">{t("shopInsurance")}</p>
-            <p className="truncate text-[10px] text-muted-foreground">{t("findProtection")}</p>
-          </div>
-        </button>
-      </section>
+      {SHOW_HOME_FINANCING_CARDS && (
+        <section className="mt-4 grid grid-cols-2 gap-2.5 px-5">
+          <button onClick={() => onNavigate("loan")} className="group flex items-center gap-3 rounded-2xl border border-border/80 bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md active:scale-[0.98]">
+            <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-emerald-500/10 text-emerald-600 transition-colors group-hover:bg-emerald-500/20">
+              <Landmark size={18} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-foreground">{t("applyFunding")}</p>
+              <p className="truncate text-[10px] text-muted-foreground">{t("matchFinancing")}</p>
+            </div>
+          </button>
+          <button onClick={() => onNavigate("insurance")} className="group flex items-center gap-3 rounded-2xl border border-border/80 bg-card p-3.5 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md active:scale-[0.98]">
+            <div className="grid size-10 shrink-0 place-items-center rounded-2xl bg-primary/10 text-primary transition-colors group-hover:bg-primary/20">
+              <ShieldCheck size={18} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-foreground">{t("shopInsurance")}</p>
+              <p className="truncate text-[10px] text-muted-foreground">{t("findProtection")}</p>
+            </div>
+          </button>
+        </section>
+      )}
 
       <section className="mt-5 px-5">
         <div className="mb-2.5 flex items-center justify-between">
@@ -358,7 +371,7 @@ function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }:
   const totalLiab = balanceSheet.liabilities.reduce((s, i) => s + i.value, 0);
   const totalEquity = balanceSheet.equity.reduce((s, i) => s + i.value, 0);
   const netCash = cashFlow.reduce((s, i) => s + i.value, 0);
-  
+
   const periodButtonLabels: Record<PeriodKey, string> = {
     week: t("period7d"),
     month: t("periodMonth"),
@@ -666,7 +679,7 @@ function SecurityCard() {
 
 function SheetFrame({ eyebrow, eyebrowClass = "text-primary", title, onClose, children }: { eyebrow: string; eyebrowClass?: string; title: string; onClose: () => void; children: ReactNode }) {
   const { t } = useTranslation();
-  return <div className="absolute inset-0 z-50 flex items-end bg-foreground/30 backdrop-blur-sm"><div className="max-h-full w-full overflow-y-auto rounded-t-[2rem] bg-card p-6 shadow-2xl"><div className="flex items-center justify-between"><div><p className={`text-xs font-bold ${eyebrowClass}`}>{eyebrow}</p><h2 className="mt-1 text-xl font-extrabold">{title}</h2></div><Button variant="icon" className="size-10 rounded-full p-0" onClick={onClose} aria-label={t("close")}><X size={18}/></Button></div>{children}</div></div>;
+  return <div className="absolute inset-0 z-50 flex items-end bg-foreground/30 backdrop-blur-sm"><div className="max-h-full w-full overflow-y-auto rounded-t-[2rem] bg-card p-6 shadow-2xl"><div className="flex items-center justify-between"><div><p className={`text-xs font-bold ${eyebrowClass}`}>{eyebrow}</p><h2 className="mt-1 text-xl font-extrabold">{title}</h2></div><Button variant="icon" className="size-10 rounded-full p-0" onClick={onClose} aria-label={t("close")}><X size={18} /></Button></div>{children}</div></div>;
 }
 
 function EntrySheet({ type, tx, onClose }: { type: Tx["type"]; tx?: Tx; onClose: () => void }) {
@@ -693,7 +706,7 @@ function EntrySheet({ type, tx, onClose }: { type: Tx["type"]; tx?: Tx; onClose:
   return (
     <SheetFrame eyebrow={income ? t("incomeEyebrow") : t("expenseEyebrow")} eyebrowClass={income ? "text-success" : "text-danger"} title={tx ? t("editTxTitle") : t("addTxTitle")} onClose={onClose}>
       <Label>{t("amountLabel")}</Label><MoneyInput large autoFocus={!tx} label={t("amountLabel")} value={value} onChange={setValue} />
-      <Label>{t("notesLabel")}</Label><input aria-label={t("notesLabel")} value={title} onChange={(e) => changeTitle(e.target.value)} maxLength={80} className={textField} placeholder={income ? t("incomeNotesPlaceholder") : t("expenseNotesPlaceholder")}/>
+      <Label>{t("notesLabel")}</Label><input aria-label={t("notesLabel")} value={title} onChange={(e) => changeTitle(e.target.value)} maxLength={80} className={textField} placeholder={income ? t("incomeNotesPlaceholder") : t("expenseNotesPlaceholder")} />
       <Label>{t("categoryLabel")}</Label><Chips options={cats} value={category} onChange={(c) => { setCategory(c); setPicked(true); }} format={(c) => categoryLabel(c, lang)} />
       <Label>{t("dateLabel")}</Label><DateInput label={t("dateLabel")} value={date} onChange={setDate} />
       <Button className="mt-6 h-12 w-full" disabled={!value} onClick={save}>{tx ? t("saveChangesBtn") : t("saveTxBtn")}</Button>
@@ -762,14 +775,12 @@ function RangeSheet({ value, onApply, onClose }: { value: Period; onApply: (p: P
         <button
           type="button"
           onClick={() => setMode("today")}
-          className={`flex w-full items-center justify-between rounded-2xl border p-3.5 text-left transition-all ${
-            mode === "today" ? "border-primary bg-primary/5 text-foreground shadow-sm" : "border-border/60 hover:border-border text-foreground"
-          }`}
+          className={`flex w-full items-center justify-between rounded-2xl border p-3.5 text-left transition-all ${mode === "today" ? "border-primary bg-primary/5 text-foreground shadow-sm" : "border-border/60 hover:border-border text-foreground"
+            }`}
         >
           <span className="text-sm font-semibold">{t("rangeToday")}</span>
-          <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${
-            mode === "today" ? "border-primary bg-primary" : "border-muted-foreground/30"
-          }`}>
+          <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${mode === "today" ? "border-primary bg-primary" : "border-muted-foreground/30"
+            }`}>
             {mode === "today" && <span className="size-2 rounded-full bg-white dark:bg-card" />}
           </span>
         </button>
@@ -778,14 +789,12 @@ function RangeSheet({ value, onApply, onClose }: { value: Period; onApply: (p: P
         <button
           type="button"
           onClick={() => setMode("week")}
-          className={`flex w-full items-center justify-between rounded-2xl border p-3.5 text-left transition-all ${
-            mode === "week" ? "border-primary bg-primary/5 text-foreground shadow-sm" : "border-border/60 hover:border-border text-foreground"
-          }`}
+          className={`flex w-full items-center justify-between rounded-2xl border p-3.5 text-left transition-all ${mode === "week" ? "border-primary bg-primary/5 text-foreground shadow-sm" : "border-border/60 hover:border-border text-foreground"
+            }`}
         >
           <span className="text-sm font-semibold">{t("range7Days")}</span>
-          <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${
-            mode === "week" ? "border-primary bg-primary" : "border-muted-foreground/30"
-          }`}>
+          <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${mode === "week" ? "border-primary bg-primary" : "border-muted-foreground/30"
+            }`}>
             {mode === "week" && <span className="size-2 rounded-full bg-white dark:bg-card" />}
           </span>
         </button>
@@ -798,9 +807,8 @@ function RangeSheet({ value, onApply, onClose }: { value: Period; onApply: (p: P
             className="flex w-full items-center justify-between text-left"
           >
             <span className="text-sm font-semibold text-foreground">{t("rangePickMonth")}</span>
-            <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${
-              mode === "month" ? "border-primary bg-primary" : "border-muted-foreground/30"
-            }`}>
+            <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${mode === "month" ? "border-primary bg-primary" : "border-muted-foreground/30"
+              }`}>
               {mode === "month" && <span className="size-2 rounded-full bg-white dark:bg-card" />}
             </span>
           </button>
@@ -831,9 +839,8 @@ function RangeSheet({ value, onApply, onClose }: { value: Period; onApply: (p: P
             className="flex w-full items-center justify-between text-left"
           >
             <span className="text-sm font-semibold text-foreground">{t("rangePickDate")}</span>
-            <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${
-              mode === "dates" ? "border-primary bg-primary" : "border-muted-foreground/30"
-            }`}>
+            <span className={`flex size-5 items-center justify-center rounded-full border-2 transition-all ${mode === "dates" ? "border-primary bg-primary" : "border-muted-foreground/30"
+              }`}>
               {mode === "dates" && <span className="size-2 rounded-full bg-white dark:bg-card" />}
             </span>
           </button>
@@ -903,22 +910,22 @@ function BottomNav({ active, onNavigate }: { active: View; onNavigate: (view: Vi
   const profileItem = { view: "profile" as View, label: t("navProfile"), icon: <CircleUserRound size={18} /> };
   return (
     <nav className="relative z-40 flex h-16 shrink-0 items-center justify-around border-t border-border/70 bg-card/95 px-3 backdrop-blur-xl shadow-lg pb-[env(safe-area-inset-bottom,0px)]">
-      <NavButton item={homeItem} active={active} onNavigate={onNavigate}/>
-      <NavButton item={reportsItem} active={active} onNavigate={onNavigate}/>
+      <NavButton item={homeItem} active={active} onNavigate={onNavigate} />
+      <NavButton item={reportsItem} active={active} onNavigate={onNavigate} />
       <Button
         className="-mt-6 flex size-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-blue-500 text-white p-0 shadow-lg shadow-primary/30 ring-4 ring-card hover:scale-105 active:scale-95 transition-all"
         onClick={() => onNavigate("scan")}
         aria-label={t("scanReceiptLabel")}
       >
-        <Camera size={21}/>
+        <Camera size={21} />
       </Button>
-      <NavButton item={finixItem} active={active} onNavigate={onNavigate}/>
-      <NavButton item={profileItem} active={active} onNavigate={onNavigate}/>
+      <NavButton item={finixItem} active={active} onNavigate={onNavigate} />
+      <NavButton item={profileItem} active={active} onNavigate={onNavigate} />
     </nav>
   );
 }
 
-function NavButton({ item, active, onNavigate }: { item: {view: View; label: string; icon: ReactNode}; active: View; onNavigate: (view: View) => void }) {
+function NavButton({ item, active, onNavigate }: { item: { view: View; label: string; icon: ReactNode }; active: View; onNavigate: (view: View) => void }) {
   const selected = active === item.view;
   return (
     <Button
