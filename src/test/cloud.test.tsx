@@ -83,7 +83,7 @@ const fake = vi.hoisted(() => {
 
 vi.mock("@/lib/env", () => ({ cloudEnabled: true, supabaseUrl: "https://contoh.supabase.co", supabaseAnonKey: "kunci-anon-contoh-untuk-pengujian" }));
 vi.mock("@supabase/supabase-js", () => ({ createClient: () => fake.client }));
-vi.mock("@/components/FinixChat", () => ({ FinixChat: () => <p>Finix</p> }));
+vi.mock("@/components/FinixChat", () => ({ FinixChat: () => <p>Bigoo</p> }));
 
 const { Route } = await import("@/routes/index");
 const App = Route.options.component!;

@@ -2,7 +2,7 @@
 
 **Bigood is an AI finance agent for small business owners (Indonesian UMKM).** Built for the 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Live: <https://fin-tar-ux1f.vercel.app>
 
-Its agent, **Finix**, completes real financial tasks on the owner's own records:
+Its agent, **Bigoo**, completes real financial tasks on the owner's own records:
 
 | Requirement | In Bigood |
 |---|---|
@@ -24,7 +24,7 @@ cp .env.example .env      # every value is optional
 npm run dev
 ```
 
-With no environment variables the app runs in **device mode** (data in the browser) and Finix runs as the built-in rule-based agent, so the demo needs no keys. Add `ANTHROPIC_API_KEY` (Claude) or `GEMINI_API_KEY` (Gemini) for the model-driven agent, and `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` for accounts (run the two SQL files in `supabase/migrations/` first). Deploy: `npm run build && npm start`, or connect the repo to Vercel/Netlify. Details in [docs/TECHNICAL.md](docs/TECHNICAL.md#7-deployment).
+With no environment variables the app runs in **device mode** (data in the browser) and Bigoo runs as the built-in rule-based agent, so the demo needs no keys. Add `ANTHROPIC_API_KEY` (Claude) or `GEMINI_API_KEY` (Gemini) for the model-driven agent, and `VITE_SUPABASE_URL` + `VITE_SUPABASE_ANON_KEY` for accounts (run the two SQL files in `supabase/migrations/` first). Deploy: `npm run build && npm start`, or connect the repo to Vercel/Netlify. Details in [docs/TECHNICAL.md](docs/TECHNICAL.md#7-deployment).
 
 ### Tests
 
@@ -41,7 +41,7 @@ All lenders and insurance products are simulated; no money moves. Final financin
 ## Bahasa Indonesia
 
 
-Aplikasi keuangan untuk UMKM (PWA, mobile-first): catat pemasukan dan pengeluaran, pindai struk, lihat laporan keuangan otomatis, tanya Finix, lalu ajukan modal dari catatan yang sama.
+Aplikasi keuangan untuk UMKM (PWA, mobile-first): catat pemasukan dan pengeluaran, pindai struk, lihat laporan keuangan otomatis, tanya Bigoo, lalu ajukan modal dari catatan yang sama.
 
 Repositori ini adalah gabungan dua versi Bigood. Spesifikasi produk ada di [docs/PRD.md](docs/PRD.md). Antarmuka tersedia dalam bahasa Inggris dan Indonesia, mengikuti bahasa browser (bisa diganti di Profil).
 
@@ -50,7 +50,7 @@ Repositori ini adalah gabungan dua versi Bigood. Spesifikasi produk ada di [docs
 | Catat transaksi | Manual dengan kategori otomatis, pindai struk lalu koreksi hasil bacaan, atau impor CSV |
 | Laporan | Laba rugi, arus kas, dan neraca dari transaksi, dengan penjelasan bahasa sehari-hari; ekspor PDF dan CSV |
 | Peringatan & proyeksi | Proyeksi kas 30 hari termasuk utang pemasok dan belanja terjadwal |
-| Finix (agen AI) | Memahami tugas, menyusun rencana, menjalankan alat bertingkat (T0–T3) pada catatanmu, lalu mengusulkan tindakan yang baru berjalan setelah kamu setujui; dampaknya diukur (hari kas aman, potensi hemat) |
+| Bigoo (agen AI) | Memahami tugas, menyusun rencana, menjalankan alat bertingkat (T0–T3) pada catatanmu, lalu mengusulkan tindakan yang baru berjalan setelah kamu setujui; dampaknya diukur (hari kas aman, potensi hemat) |
 | Ajukan Modal | Skor kecocokan dengan alasannya, proposal PDF terisi otomatis, status pengajuan (simulasi) |
 | Asuransi Toko | Rekomendasi perlindungan usaha (simulasi) |
 | Privasi | Izin sebelum data dikirim ke AI, log aktivitas, dan hapus semua data |
@@ -108,12 +108,12 @@ Rincian kontrol, risiko, dan batasannya ada di [docs/SECURITY.md](docs/SECURITY.
 - **PIN 6 angka** diminta sebelum data keuangan keluar dari aplikasi (PDF, Excel/CSV, proposal, log) dan sebelum menghapus semua data, seperti di aplikasi bank. Lima kali salah, terkunci 5 menit.
 - **Endpoint AI** menolak permintaan dari situs lain, membatasi ukuran kiriman, dan membatasi jumlah permintaan per pengguna (atur dengan `AI_RATE_PER_MINUTE` dan `AI_RATE_PER_DAY`).
 - **Header keamanan** (Content-Security-Policy, larangan iframe, HSTS, dan lainnya) dipasang di setiap respons server.
-- **Finix menolak tindakan Tier-3** (memindahkan uang, mengakses data orang lain, mengirim data ke luar) dengan jawaban tetap tanpa memanggil AI, dan percobaannya tercatat sebagai "Diblokir".
+- **Bigoo menolak tindakan Tier-3** (memindahkan uang, mengakses data orang lain, mengirim data ke luar) dengan jawaban tetap tanpa memanggil AI, dan percobaannya tercatat sebagai "Diblokir".
 - **Ekspor CSV** menetralkan teks yang bisa dijalankan sebagai rumus Excel.
 
 ## AI: Claude atau Gemini
 
-Finix dan pemindai struk memanggil AI dari server ([src/lib/ai.server.ts](src/lib/ai.server.ts)), jadi kunci API tidak pernah sampai ke browser.
+Bigoo dan pemindai struk memanggil AI dari server ([src/lib/ai.server.ts](src/lib/ai.server.ts)), jadi kunci API tidak pernah sampai ke browser.
 
 | Variabel | Keterangan |
 |---|---|
@@ -121,7 +121,7 @@ Finix dan pemindai struk memanggil AI dari server ([src/lib/ai.server.ts](src/li
 | `GEMINI_API_KEY` | Kunci Gemini dari [aistudio.google.com](https://aistudio.google.com). Model bawaan `gemini-flash-lite-latest`, bisa diganti dengan `GEMINI_MODEL`. Bila model itu sibuk atau kuotanya habis, aplikasi otomatis mencoba `GEMINI_FALLBACK_MODEL` (bawaan `gemini-flash-latest`). |
 | `AI_PROVIDER` | `claude` atau `gemini`. Hanya perlu jika kedua kunci diisi; tanpa ini Claude yang dipakai. |
 
-Tanpa kunci, aplikasi berjalan dalam mode demo: Finix menjawab dengan rumus dari catatan transaksi dan pemindai struk menampilkan contoh hasil bacaan. Keduanya diberi label "mode demo" di layar.
+Tanpa kunci, aplikasi berjalan dalam mode demo: Bigoo menjawab dengan rumus dari catatan transaksi dan pemindai struk menampilkan contoh hasil bacaan. Keduanya diberi label "mode demo" di layar.
 
 Paket gratis Gemini punya batas harian per model (model `flash` hanya 20 permintaan per hari saat ini ditulis; batas terkini ada di [ai.dev/rate-limit](https://ai.dev/rate-limit)) dan dapat memakai data yang dikirim untuk pengembangan layanannya. Pakai data contoh saat demo dengan kunci gratis.
 

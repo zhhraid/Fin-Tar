@@ -1,5 +1,5 @@
 // Bigood service worker: keeps the app shell available offline.
-// API calls (Finix, receipt scan) always go to the network.
+// API calls (Bigoo, receipt scan) always go to the network.
 const CACHE = "fintar-v3"; // bump on releases that change cached files; old caches are deleted on activate
 
 self.addEventListener("install", () => self.skipWaiting());

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseAmount, parseCsv, suggestCategory, toCsv } from "@/lib/csv";
-import { cashBalance, categoryLabel, dateInputValue, defaultProfile, forecastCash, getInsights, getStatements, parseLedger, type Planned, type Tx } from "@/lib/financials";
+import { cashBalance, cashFlowSeries, categoryLabel, expenseBreakdown, dateInputValue, defaultProfile, forecastCash, getInsights, getStatements, parseLedger, type Planned, type Tx } from "@/lib/financials";
 import { reportTables } from "@/lib/export";
 import { localFinixReply } from "@/lib/finix-local";
 import { installment, lenders, purposeLabel, scoreLender } from "@/lib/scoring";
@@ -208,7 +208,7 @@ describe("impor CSV", () => {
   });
 });
 
-describe("Finix mode demo", () => {
+describe("Bigoo mode demo", () => {
   it("menghitung target omzet dari data 30 hari terakhir", () => {
     expect(localFinixReply("Aku mau omzet bulan depan naik 20%", ledger, defaultProfile)).toContain("Rp3.600.000");
   });
@@ -250,5 +250,27 @@ describe("bahasa Inggris", () => {
     const { rows, errors } = parseCsv(csv, "en");
     expect(errors).toEqual([]);
     expect(rows.map((r) => r.category).sort()).toEqual(ledger.map((t) => t.category).sort());
+  });
+});
+
+describe("data grafik", () => {
+  it("pengeluaran per kategori diurutkan dari yang terbesar, porsinya berjumlah 100%", () => {
+    const { total, rows } = expenseBreakdown(ledger, "en");
+    expect(rows.map((r) => r.value)).toEqual([...rows.map((r) => r.value)].sort((a, b) => b - a));
+    expect(rows.reduce((s, r) => s + r.share, 0)).toBeCloseTo(1);
+    expect(total).toBe(ledger.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0));
+    expect(rows.map((r) => r.label)).toContain("Delivery");
+  });
+
+  it("pemasukan dan pengeluaran per bucket menjumlah ke total periode", () => {
+    const week = cashFlowSeries(ledger, "week");
+    expect(week.unit).toBe("day");
+    expect(week.buckets).toHaveLength(7);
+    const year = cashFlowSeries(ledger, "year");
+    expect(year.unit).toBe("month");
+    const q = cashFlowSeries(ledger, "quarter");
+    const inQ = getStatements(ledger, "quarter", defaultProfile).totals;
+    expect(q.buckets.reduce((s, b) => s + b.income, 0)).toBe(inQ.revenue);
+    expect(q.buckets.reduce((s, b) => s + b.expense, 0)).toBe(inQ.expense);
   });
 });
