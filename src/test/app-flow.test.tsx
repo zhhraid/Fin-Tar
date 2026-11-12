@@ -1,12 +1,13 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Route, setHomeFinancingCardsVisible, SHOW_HOME_FINANCING_CARDS } from "@/routes/index";
+import { setHomeFinancingCardsVisible, SHOW_HOME_FINANCING_CARDS } from "@/lib/features";
+import { Route } from "@/routes/index";
 
 // Device mode, whatever the developer's own .env says.
 vi.mock("@/lib/env", () => ({ cloudEnabled: false, supabaseUrl: "", supabaseAnonKey: "" }));
 // The chat screen talks to the server; these flows never open it.
-vi.mock("@/components/FinixChat", () => ({ FinixChat: ({ prompt }: { prompt?: string | null }) => <p>Finix: {prompt}</p> }));
+vi.mock("@/components/FinixChat", () => ({ FinixChat: ({ prompt }: { prompt?: string | null }) => <p>Bigoo: {prompt}</p> }));
 
 const App = Route.options.component!;
 const press = (name: string | RegExp) => fireEvent.click(screen.getByRole("button", { name }));
@@ -78,16 +79,16 @@ describe("alur utama Bigood", () => {
     expect(screen.queryByText("Pesanan lama 2023")).not.toBeInTheDocument();
   });
 
-  it("meminta izin AI sebelum Finix, lalu meneruskan pertanyaan dari laporan", () => {
+  it("meminta izin AI sebelum Bigoo, lalu meneruskan pertanyaan dari laporan", () => {
     render(<App />);
     press("Laporan");
-    fireEvent.click(screen.getByText("Tanya Finix soal laporan ini"));
+    fireEvent.click(screen.getByText("Tanya Bigoo soal laporan ini"));
 
     expect(screen.getByText("Izinkan AI untuk menjawab pertanyaanmu?")).toBeInTheDocument();
-    expect(screen.queryByText(/Finix: /)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Bigoo: /)).not.toBeInTheDocument();
     press("Saya setuju");
 
-    expect(screen.getByText(/Finix: Jelaskan laporan keuanganku/)).toBeInTheDocument();
+    expect(screen.getByText(/Bigoo: Jelaskan laporan keuanganku/)).toBeInTheDocument();
   });
 
   it("menampilkan proyeksi kas dan menandai kewajiban lunas sebagai pengeluaran", () => {

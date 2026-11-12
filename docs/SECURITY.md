@@ -53,20 +53,20 @@ Dokumen ini menjelaskan bagaimana Bigood melindungi data keuangan pelaku UMKM, a
 | Header lain | HSTS, `X-Frame-Options: DENY`, `nosniff`, `Referrer-Policy`, `Cross-Origin-Opener-Policy`, `Permissions-Policy` (kamera hanya untuk Bigood; mikrofon, lokasi, dan pembayaran dimatikan). | `src/lib/security-headers.ts`, `netlify.toml` |
 | Proteksi CSRF untuk server function | Bawaan TanStack Start, dipasang ulang secara eksplisit. | `src/start.ts` |
 
-Diuji pada build produksi (`npm run build && npm start`) dengan Chromium: semua header terkirim, permintaan lintas situs ke `/api/chat` mendapat 403, dan alur utama (laporan, unduh PDF dengan PIN, Finix, pindai) berjalan tanpa diblokir CSP. Satu-satunya laporan CSP berasal dari pustaka validasi `zod`, yang mengecek apakah `eval` diizinkan lalu otomatis memakai jalur tanpa `eval`.
+Diuji pada build produksi (`npm run build && npm start`) dengan Chromium: semua header terkirim, permintaan lintas situs ke `/api/chat` mendapat 403, dan alur utama (laporan, unduh PDF dengan PIN, Bigoo, pindai) berjalan tanpa diblokir CSP. Satu-satunya laporan CSP berasal dari pustaka validasi `zod`, yang mengecek apakah `eval` diizinkan lalu otomatis memakai jalur tanpa `eval`.
 
-### 3.4 Asisten AI (Finix) dan izin bertingkat
+### 3.4 Asisten AI (Bigoo) dan izin bertingkat
 
 | Tier | Contoh | Aturan di Bigood |
 |---|---|---|
-| T0 Baca | Bertanya ke Finix, melihat ringkasan | Otomatis, dicatat |
+| T0 Baca | Bertanya ke Bigoo, melihat ringkasan | Otomatis, dicatat |
 | T1 Saran | Skor pembiayaan, target omzet | Otomatis, selalu dengan alasan |
 | T2 Bertindak | Impor CSV, kirim proposal, ekspor data | Hanya setelah persetujuan pengguna. Ekspor data juga wajib PIN |
 | T3 Terlarang | Memindahkan uang, membaca/mengubah data orang lain, mengirim data ke luar | Selalu ditolak dengan jawaban tetap **tanpa memanggil AI**, lalu dicatat sebagai "Diblokir" |
 
 Pendeteksi T3 (`src/lib/guardrails.ts`) mencari *permintaan untuk bertindak*, bukan sekadar topik. "Tolong transfer 2 juta ke supplier" diblokir, sedangkan "Apakah kas cukup untuk bayar supplier?" tetap dijawab. Daftar contohnya diuji di `src/test/security.test.ts`.
 
-Pertahanan terhadap prompt injection: instruksi sistem Finix menegaskan bahwa nama transaksi dan isi struk adalah data, bukan perintah. Hasil bacaan struk divalidasi dengan skema JSON lalu dibersihkan (panjang teks, angka tidak negatif, kategori dari daftar tetap) sebelum ditampilkan. Tidak ada yang tersimpan sebelum pengguna menekan konfirmasi.
+Pertahanan terhadap prompt injection: instruksi sistem Bigoo menegaskan bahwa nama transaksi dan isi struk adalah data, bukan perintah. Hasil bacaan struk divalidasi dengan skema JSON lalu dibersihkan (panjang teks, angka tidak negatif, kategori dari daftar tetap) sebelum ditampilkan. Tidak ada yang tersimpan sebelum pengguna menekan konfirmasi.
 
 ### 3.5 Log aktivitas berantai hash
 
@@ -114,7 +114,7 @@ Skala: R = rendah, S = sedang, T = tinggi. Risiko sisa adalah tingkat risiko set
 | 2 | HP dipinjam lalu laporan diunduh atau dihapus | T | S | PIN untuk ekspor dan hapus, penguncian setelah 5 kali salah, log | R–S (layar biasa tetap terlihat; lihat batasan) |
 | 3 | Kuota atau tagihan AI dihabiskan pihak luar | T | S | Tolak lintas situs, batas ukuran, batas per menit/hari | S (batasnya per instance server) |
 | 4 | Clickjacking atau XSS | S | T | CSP, `frame-ancestors 'none'`, React meng-escape teks | R |
-| 5 | Finix disuruh memindahkan uang | S | T | Finix memang tidak punya kemampuan itu; permintaan T3 ditolak tanpa AI dan dicatat | R |
+| 5 | Bigoo disuruh memindahkan uang | S | T | Bigoo memang tidak punya kemampuan itu; permintaan T3 ditolak tanpa AI dan dicatat | R |
 | 6 | Prompt injection lewat struk | S | S | Struk diperlakukan sebagai data, hasilnya divalidasi skema, wajib dikonfirmasi pengguna | R |
 | 7 | Riwayat aktivitas dipalsukan | R | S | Rantai hash, waktu dari server, tidak bisa diubah atau dihapus | R–S (lihat batasan) |
 | 8 | Rumus berbahaya di file CSV | R | S | Netralisasi rumus saat ekspor | R |
@@ -131,7 +131,7 @@ Batasan ini dinyatakan terus terang sesuai permintaan PRD untuk *self-assessment
 3. **Batas permintaan AI disimpan di memori server.** Di hosting serverless, tiap instance menghitung sendiri, jadi batas totalnya bisa lebih longgar dari angka yang disetel. Untuk skala produksi, gunakan penyimpanan bersama seperti Redis atau Upstash, atau rate limiting bawaan platform.
 4. **Isi log tetap ditulis oleh aplikasi.** Rantai hash membuktikan bahwa log tidak diubah setelah tercatat, tetapi pemilik akun yang memanggil API sendiri tetap bisa menambahkan baris palsu di ujung rantai. Pemilik database yang mematikan trigger lalu menghitung ulang semua hash juga bisa menulis ulang riwayat. Hash terakhir di file ekspor menjadi patokan untuk membuktikannya.
 5. **CSP masih mengizinkan skrip inline**, karena halaman yang dirender server membawa data hidrasinya secara inline. Langkah berikutnya adalah nonce per permintaan.
-6. **Pendeteksi T3 berbasis pola kata.** Kalimat yang sangat tidak biasa bisa lolos ke AI. Itu tidak berbahaya, karena Finix memang tidak bisa memindahkan uang dan instruksi sistemnya menolak permintaan seperti itu, tetapi percobaannya tidak tercatat sebagai T3.
+6. **Pendeteksi T3 berbasis pola kata.** Kalimat yang sangat tidak biasa bisa lolos ke AI. Itu tidak berbahaya, karena Bigoo memang tidak bisa memindahkan uang dan instruksi sistemnya menolak permintaan seperti itu, tetapi percobaannya tidak tercatat sebagai T3.
 7. **Mode perangkat** menyimpan data tanpa enkripsi di `localStorage` browser.
 8. **Akurasi pembacaan struk** belum diukur pada himpunan uji sendiri (PRD meminta minimal 20 foto).
 

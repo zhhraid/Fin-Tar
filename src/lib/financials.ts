@@ -414,6 +414,41 @@ export function filterPeriod(txs: Tx[], key: Period) {
   return txs.filter((t) => { const d = new Date(t.date); return d >= start && d <= end; });
 }
 
+/** Expense per category for the given transactions, largest first, with each one's share of the total. */
+export function expenseBreakdown(txs: Tx[], lang: Language = "id") {
+  const rows = group(txs.filter((t) => t.type === "expense")).sort((a, b) => b.value - a.value);
+  const total = rows.reduce((s, r) => s + r.value, 0);
+  return { total, rows: rows.map((r) => ({ category: r.label, label: categoryLabel(r.label, lang), value: r.value, share: total ? r.value / total : 0 })) };
+}
+
+/**
+ * Income and expense per time bucket across the period: days for up to two weeks,
+ * weeks for up to three months, months beyond that. Empty buckets are kept so gaps show.
+ */
+export function cashFlowSeries(all: Tx[], key: Period, lang: Language = "id", now = new Date()) {
+  const { start, end } = periodRange(key, now, lang);
+  const last = end.getTime() > now.getTime() && typeof key === "string" ? now : end;
+  const days = Math.max(1, Math.round((last.getTime() - start.getTime()) / DAY));
+  const unit: "day" | "week" | "month" = days <= 14 ? "day" : days <= 92 ? "week" : "month";
+  const buckets: { start: Date; end: Date; label: string; income: number; expense: number }[] = [];
+  const cursor = new Date(start);
+  while (cursor <= last) {
+    const from = new Date(cursor);
+    if (unit === "day") cursor.setDate(cursor.getDate() + 1);
+    else if (unit === "week") cursor.setDate(cursor.getDate() + 7);
+    else { cursor.setDate(1); cursor.setMonth(cursor.getMonth() + 1); }
+    const to = new Date(Math.min(cursor.getTime() - 1, end.getTime()));
+    const label = unit === "month" ? from.toLocaleDateString(locale(lang), { month: "short" }) : from.toLocaleDateString(locale(lang), { day: "numeric", month: "short" });
+    buckets.push({ start: from, end: to, label, income: 0, expense: 0 });
+  }
+  for (const t of all) {
+    const d = new Date(t.date);
+    const b = buckets.find((x) => d >= x.start && d <= x.end);
+    if (b) b[t.type] += t.amount;
+  }
+  return { unit, buckets };
+}
+
 /** Transactions from `from` (inclusive) to `to` (exclusive) days back, counted from the end of today. */
 export function rollingDays(txs: Tx[], from: number, to: number, now = new Date()) {
   const anchor = new Date(now);
@@ -533,7 +568,7 @@ export function getInsights(all: Tx[], p: Profile, items: Planned[] = [], lang: 
     out.push({ level: "warning", title, text: L(`${rp(dueSoon.amount)} must be paid on ${shortDate(dueSoon.due, lang)}. Set aside some sales over the next few days.`, `${rp(dueSoon.amount)} perlu dibayar ${shortDate(dueSoon.due, lang)}. Sisihkan dari penjualan beberapa hari ke depan.`) });
   }
 
-  if (cur.net < 0) out.push({ level: "danger", title: L(`Loss of ${rp(-cur.net)} in the last 30 days`, `30 hari terakhir rugi ${rp(-cur.net)}`), text: L("Spending is higher than income. Ask Finix which costs can be cut.", "Pengeluaran lebih besar dari pemasukan. Tanya Finix biaya mana yang bisa ditekan."), action: "finix" });
+  if (cur.net < 0) out.push({ level: "danger", title: L(`Loss of ${rp(-cur.net)} in the last 30 days`, `30 hari terakhir rugi ${rp(-cur.net)}`), text: L("Spending is higher than income. Ask Bigoo which costs can be cut.", "Pengeluaran lebih besar dari pemasukan. Tanya Bigoo biaya mana yang bisa ditekan."), action: "finix" });
   else if (cur.revenue > 0 && cur.net / cur.revenue < 0.1) out.push({ level: "warning", title: L("Thin net margin", "Margin bersih tipis"), text: L(`Only Rp${Math.round((cur.net / cur.revenue) * 100)} is left from every Rp100 of sales. Review your prices or your largest costs.`, `Dari tiap Rp100 penjualan hanya tersisa Rp${Math.round((cur.net / cur.revenue) * 100)}. Tinjau harga jual atau biaya terbesar.`), action: "finix" });
 
   const prevByCat = new Map(group(prevTx.filter((t) => t.type === "expense")).map((g) => [g.label, g.value]));

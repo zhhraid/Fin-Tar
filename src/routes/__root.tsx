@@ -84,7 +84,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Bigood" },
-      { name: "description", content: "Kelola arus kas bisnis dan dapatkan insight keuangan dari Finix." },
+      { name: "description", content: "Kelola arus kas bisnis dan dapatkan insight keuangan dari Bigoo." },
       { name: "author", content: "Bigood" },
       { name: "theme-color", content: "#2563eb" },
       { name: "mobile-web-app-capable", content: "yes" },

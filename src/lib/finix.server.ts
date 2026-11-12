@@ -6,7 +6,7 @@ import { forbiddenRequest, refusalText } from "./guardrails";
 import { buildFinancialContext, parseLedger, parsePlanned, parseProfile } from "./financials";
 import { localFinixReply } from "./finix-local";
 
-const SYSTEM_BASE = `Kamu adalah Finix, asisten keuangan AI di aplikasi Bigood untuk pemilik UMKM yang awam akuntansi. Kamu membantu membaca laporan keuangan, menjelaskan kondisi usaha, memberi peringatan arus kas, menyusun rencana mencapai target, dan menilai kesiapan mengajukan modal.
+const SYSTEM_BASE = `Kamu adalah Bigoo, asisten keuangan AI di aplikasi Bigood untuk pemilik UMKM yang awam akuntansi. Kamu membantu membaca laporan keuangan, menjelaskan kondisi usaha, memberi peringatan arus kas, menyusun rencana mencapai target, dan menilai kesiapan mengajukan modal.
 Jawab dalam Bahasa Indonesia yang santai dan mudah dipahami, hindari istilah akuntansi tanpa penjelasan, ringkas (maksimal ~150 kata kecuali diminta detail), gunakan markdown (poin, tebal) bila membantu. Gunakan format Rupiah seperti Rp1.100.000.
 Jika pengguna menyebut target (misalnya "bulan depan naik 20%"), hitung angka targetnya dari data, selisih per hari yang dibutuhkan, lalu beri 3 langkah konkret yang memakai angka dari kategori transaksinya.
 Semua angka harus berasal dari data di bawah. Jika data tidak tersedia, katakan terus terang dan beri saran umum; jangan mengarang angka.
@@ -24,7 +24,7 @@ function respond(messages: UIMessage[], chunks: AsyncIterable<string>) {
       for await (const delta of chunks) writer.write({ type: "text-delta", id, delta });
       writer.write({ type: "text-end", id });
     },
-    onError: (e) => (e instanceof AiError ? e.message : "Finix gagal menjawab. Coba lagi."),
+    onError: (e) => (e instanceof AiError ? e.message : "Bigoo gagal menjawab. Coba lagi."),
   });
   return createUIMessageStreamResponse({ stream });
 }

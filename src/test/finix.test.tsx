@@ -5,7 +5,7 @@ import { FinixChat } from "@/components/FinixChat";
 
 vi.mock("@/lib/env", () => ({ cloudEnabled: false, supabaseUrl: "", supabaseAnonKey: "" }));
 
-describe("layar Finix", () => {
+describe("layar Bigoo", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.restoreAllMocks();

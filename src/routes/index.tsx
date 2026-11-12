@@ -1,9 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { CashFlowChart, SpendingBreakdown } from "@/components/Charts";
 import {
   Bell,
   Bot,
   CalendarDays,
   Camera,
+  ChartColumn,
+  ChartPie,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
@@ -43,6 +46,7 @@ import { PinGate } from "@/components/PinSheet";
 import { hasPin, requestPin, usePinRequest, withPin } from "@/lib/pin";
 import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
 import { signOut, startCloud, useAuth } from "@/lib/cloud";
+import { SHOW_HOME_FINANCING_CARDS } from "@/lib/features";
 import { csvTemplate, parseCsv, suggestCategory, type CsvResult } from "@/lib/csv";
 import { exportReportPdf, exportTransactionsCsv } from "@/lib/export";
 import { addTransaction, addTransactions, categoryLabel, dateInputToIso, dateInputValue, expenseCategories, getInsights, getStatements, incomeCategories, logActivity, periodRange, periods, removeTransaction, resetLedger, rollingDays, rp, setAiConsent, summarize, updateProfile, updateTransaction, useAiConsent, useLedger, usePlanned, useProfile, type Category, type Period, type PeriodKey, type Tx } from "@/lib/financials";
@@ -55,9 +59,9 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "Bigood — Keuangan Bisnis Lebih Terarah" },
-      { name: "description", content: "Catat arus kas, pindai struk, dan dapatkan rekomendasi keuangan bisnis dari Finix AI." },
+      { name: "description", content: "Catat arus kas, pindai struk, dan dapatkan rekomendasi keuangan bisnis dari Bigoo AI." },
       { property: "og:title", content: "Bigood — Keuangan Bisnis Lebih Terarah" },
-      { property: "og:description", content: "Kelola arus kas UMKM dengan pencatatan cepat dan analisis Finix AI." },
+      { property: "og:description", content: "Kelola arus kas UMKM dengan pencatatan cepat dan analisis Bigoo AI." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -156,23 +160,12 @@ function FinixGate({ children }: { children: ReactNode }) {
   return <main className="pb-6 pt-6"><ConsentGate feature={t("finixConsentFeature")}>{children}</ConsentGate></main>;
 }
 
-/**
- * Kontrol tampilan fitur "Funding Match" (Ajukan Modal) dan "Shop Insurance" (Asuransi Toko) di Beranda.
- * Set `false` untuk menyembunyikan dari UI pengguna (default saat ini).
- * Ubah menjadi `true` jika suatu saat ingin memunculkan kembali kedua menu tersebut.
- */
-export let SHOW_HOME_FINANCING_CARDS = false;
-
-export function setHomeFinancingCardsVisible(visible: boolean) {
-  SHOW_HOME_FINANCING_CARDS = visible;
-}
-
 function HomeView({ onNavigate, onAdd, onEdit }: { onNavigate: (view: View) => void; onAdd: (type: Tx["type"]) => void; onEdit: (tx: Tx) => void }) {
   const ledger = useLedger();
   const profile = useProfile();
   const planned = usePlanned();
   const { t, lang } = useTranslation();
-  const { totals, cash } = getStatements(ledger, "month", profile, planned, lang);
+  const { totals, cash, txs: monthTxs } = getStatements(ledger, "month", profile, planned, lang);
   const insights = getInsights(ledger, profile, planned, lang);
   const top = insights[0]!;
   const healthStatusMap = {
@@ -275,6 +268,18 @@ function HomeView({ onNavigate, onAdd, onEdit }: { onNavigate: (view: View) => v
           </Button>
         </div>
         <AlertCard alert={top} />
+      </section>
+
+      <section className="mt-5 px-5">
+        <div className="mb-2.5 flex items-center justify-between">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{lang === "en" ? "Where your money went this month" : "Kemana uangmu pergi bulan ini"}</h3>
+          <Button variant="ghost" className="h-auto p-0 text-xs font-bold text-primary hover:bg-transparent hover:underline" onClick={() => onNavigate("reports")}>
+            {lang === "en" ? "See charts" : "Lihat grafik"}
+          </Button>
+        </div>
+        <div className="rounded-2xl border border-border/80 bg-card p-4 shadow-sm">
+          <SpendingBreakdown txs={monthTxs} lang={lang} limit={3} />
+        </div>
       </section>
 
       <section className="mt-5 px-5">
@@ -421,6 +426,13 @@ function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }:
         <Kpi label={t("kpiNetMargin")} value={pct(totals.net)} accent />
       </div>
 
+      <ChartCard title={lang === "en" ? "Income vs expense" : "Pemasukan vs pengeluaran"} hint={lang === "en" ? "Tap a column to see its numbers." : "Ketuk kolom untuk melihat angkanya."} icon={<ChartColumn size={16} />}>
+        <CashFlowChart all={ledger} period={period} lang={lang} />
+      </ChartCard>
+      <ChartCard title={lang === "en" ? "Where your money goes" : "Kemana uangmu pergi"} hint={lang === "en" ? "Expenses by category in this period." : "Pengeluaran per kategori di periode ini."} icon={<ChartPie size={16} />}>
+        <SpendingBreakdown txs={txs} lang={lang} />
+      </ChartCard>
+
       <button onClick={() => onAsk(lang === "en" ? `Explain my financial statements for ${periodName} in simple terms, and what should I improve?` : `Jelaskan laporan keuanganku untuk periode ${periodName} dengan bahasa sederhana, lalu apa yang perlu kuperbaiki?`)} className="mt-4 flex w-full items-center gap-3 rounded-2xl border border-primary p-3 text-left transition-colors hover:bg-muted">
         <img src={finixMark} alt="" width={32} height={32} className="size-8 shrink-0 rounded-lg bg-muted object-contain" />
         <span className="min-w-0 flex-1"><span className="block text-xs font-bold">{t("askFinixAboutReport")}</span><span className="block text-[10px] text-muted-foreground">{t("explainedEverydayLang")}</span></span>
@@ -465,6 +477,10 @@ function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }:
 
 function Kpi({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
   return <div className={`rounded-2xl p-3 ${accent ? "bg-primary text-primary-foreground" : "bg-muted"}`}><p className={`text-[10px] font-semibold ${accent ? "opacity-75" : "text-muted-foreground"}`}>{label}</p><p className="mt-1 text-sm font-extrabold">{value}</p></div>;
+}
+
+function ChartCard({ title, hint, icon, children }: { title: string; hint: string; icon: ReactNode; children: ReactNode }) {
+  return <section className="mt-4 rounded-3xl border border-border p-5"><h2 className="flex items-center gap-2 text-sm font-extrabold"><span className="grid size-7 place-items-center rounded-lg bg-muted text-primary">{icon}</span>{title}</h2><p className="mb-3 mt-1 text-[11px] text-muted-foreground">{hint}</p>{children}</section>;
 }
 
 function Statement({ title, hint, note, icon, children }: { title: string; hint: string; note: string; icon: ReactNode; children: ReactNode }) {

@@ -1,5 +1,5 @@
-// Tier-3 actions (PRD section 8): Finix must always refuse them, and the refusal is logged.
-// Finix cannot do any of these anyway; catching them here means the refusal is fixed text,
+// Tier-3 actions (PRD section 8): Bigoo must always refuse them, and the refusal is logged.
+// Bigoo cannot do any of these anyway; catching them here means the refusal is fixed text,
 // costs no AI call, and shows up in the activity log as "blocked".
 // The patterns look for a request to act (move money, touch someone else's data, send data
 // out), not for the topic: "apakah kas cukup untuk bayar supplier?" is a normal question.

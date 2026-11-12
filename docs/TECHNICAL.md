@@ -1,8 +1,8 @@
 # Bigood: Technical Documentation
 
-**Bigood** is an AI finance agent for micro and small business owners (Indonesian UMKM). Track: 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Its agent, **Finix**, completes real financial tasks on the owner's own records: it understands the request, plans steps, runs permission-tiered tools, proposes actions that only happen after the user approves, and reports the measurable impact.
+**Bigood** is an AI finance agent for micro and small business owners (Indonesian UMKM). Track: 2026 FinTechathon International Track, **Topic E: SME Finance Copilot**. Its agent, **Bigoo**, completes real financial tasks on the owner's own records: it understands the request, plans steps, runs permission-tiered tools, proposes actions that only happen after the user approves, and reports the measurable impact.
 
-Live app: <https://fin-tar-seven.vercel.app> · Source: <https://github.com/zhhraid/Fin-Tar>
+Live app: <https://fin-tar-ux1f.vercel.app> · Source: <https://github.com/zhhraid/Fin-Tar>
 
 ## 1. What the agent does
 
@@ -23,7 +23,7 @@ Live app: <https://fin-tar-seven.vercel.app> · Source: <https://github.com/zhhr
  │   device mode: localStorage              │ /api/agent │  1. guard: origin, size, rate limit           │
  │   account mode: Supabase (RLS)           ├───────────►│  2. login + AI consent (account mode)         │
  │                                          │  snapshot  │  3. Tier-3 refusal (guardrails.ts)            │
- │ Finix agent screen (FinixChat.tsx)       │  + question│  4. agent loop ──► ai.server.ts ──► Claude /  │
+ │ Bigoo agent screen (FinixChat.tsx)       │  + question│  4. agent loop ──► ai.server.ts ──► Claude /  │
  │   intent · plan · trace · metrics        │◄───────────┤       │            (tool calling)     Gemini   │
  │   proposals: Approve / Reject (+ PIN)    │  NDJSON    │       └─► tools.ts (T0/T1 run, T2 propose)    │
  │   executes approved T2 actions locally   │  events    │     no key / provider error ─► rules.ts agent │

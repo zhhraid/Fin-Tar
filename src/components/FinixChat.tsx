@@ -12,7 +12,7 @@ import type { Metric, Proposal } from "@/lib/agent/tools";
 import type { AgentEvent, AgentStep, Intent } from "@/lib/agent/types";
 import finixMark from "@/assets/finix-mark.png";
 
-// Finix, the Bigood finance agent. Each question is one agent run, streamed from
+// Bigoo, the Bigood finance agent. Each question is one agent run, streamed from
 // /api/agent: intent -> plan -> tool calls (with tier) -> measured impact -> answer ->
 // proposals. Proposals change nothing until the user approves them here; large amounts and
 // financing applications also need the PIN. Every run and decision goes to the activity log.
@@ -201,9 +201,9 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
   return (
     <main className="flex h-full min-h-0 flex-1 flex-col pb-2">
       <header className="flex items-center gap-3 border-b border-border px-5 pb-3 pt-6">
-        <img src={finixMark} alt="Finix" width={44} height={44} className="size-11 rounded-2xl bg-muted object-contain p-0.5" />
+        <img src={finixMark} alt="Bigoo" width={44} height={44} className="size-11 rounded-2xl bg-muted object-contain p-0.5" />
         <div className="min-w-0 flex-1">
-          <h1 className="text-lg font-extrabold leading-tight">Finix <span className="ml-1 rounded-md bg-primary/10 px-1.5 py-0.5 align-middle text-[10px] font-bold text-primary">{L("AI AGENT", "AGEN AI")}</span></h1>
+          <h1 className="text-lg font-extrabold leading-tight">Bigoo <span className="ml-1 rounded-md bg-primary/10 px-1.5 py-0.5 align-middle text-[10px] font-bold text-primary">{L("AI AGENT", "AGEN AI")}</span></h1>
           <p className="truncate text-xs text-muted-foreground"><span className="text-success">●</span> {L(`Finance agent for ${profile.name}`, `Agen keuangan ${profile.name}`)} · {modeLabel}</p>
         </div>
         {runs.length > 0 && <Button variant="icon" size="icon" className="rounded-full" onClick={() => setRuns([])} disabled={busy} aria-label={L("Start over", "Mulai ulang")}><RotateCcw size={16} /></Button>}
@@ -221,7 +221,7 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
         {runs.length === 0 && (
           <div className="flex flex-col items-center pt-2 text-center">
             <img src={finixMark} alt="" width={80} height={80} className="size-20 object-contain" />
-            <h2 className="mt-2 text-lg font-extrabold">{L("Hi, I'm Finix, your finance agent", "Halo, aku Finix, agen keuanganmu")}</h2>
+            <h2 className="mt-2 text-lg font-extrabold">{L("Hi, I'm Bigoo, your finance agent", "Halo, aku Bigoo, agen keuanganmu")}</h2>
             <p className="mt-1 max-w-72 text-xs leading-relaxed text-muted-foreground">{L("Give me a task. I'll understand it, plan the steps, run the tools on your records, and propose actions that only happen after you approve.", "Beri aku tugas. Aku pahami, susun langkahnya, jalankan alat pada catatanmu, lalu usulkan tindakan yang baru berjalan setelah kamu setujui.")}</p>
             <div className="mt-5 flex w-full flex-col gap-2">
               {suggestions.map((s) => (
@@ -300,7 +300,7 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
 
       <form onSubmit={submit} className="flex items-end gap-2 px-4 pb-3 pt-2">
         <textarea
-          aria-label={L("Give Finix a task", "Beri Finix tugas")}
+          aria-label={L("Give Bigoo a task", "Beri Bigoo tugas")}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => {
@@ -311,7 +311,7 @@ export function FinixChat({ prompt, onPromptUsed }: { prompt?: string | null; on
           }}
           rows={1}
           maxLength={1000}
-          placeholder={L("Give Finix a task…", "Beri Finix tugas…")}
+          placeholder={L("Give Bigoo a task…", "Beri Bigoo tugas…")}
           className="max-h-28 min-h-11 flex-1 resize-none rounded-2xl border border-border bg-card px-3.5 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/20"
         />
         <Button type="submit" className="size-11 shrink-0 rounded-2xl p-0" disabled={busy || !text.trim()} aria-label={L("Send", "Kirim")}>{busy ? <Loader2 size={18} className="animate-spin" /> : <ArrowUp size={18} />}</Button>
