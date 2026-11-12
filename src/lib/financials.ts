@@ -421,32 +421,61 @@ export function expenseBreakdown(txs: Tx[], lang: Language = "id") {
   return { total, rows: rows.map((r) => ({ category: r.label, label: categoryLabel(r.label, lang), value: r.value, share: total ? r.value / total : 0 })) };
 }
 
+export type TrendPoint = { start: Date; end: Date; label: string; income: number; expense: number; forecast: boolean };
+
 /**
- * Income and expense per time bucket across the period: days for up to two weeks,
- * weeks for up to three months, months beyond that. Empty buckets are kept so gaps show.
+ * Income and expense per day, week or 30-day window, ending today (or at the end of a picked range),
+ * followed by a projection: average daily income and spending of the last 30 days plus every unpaid
+ * bill in that window. `cross` is where projected spending first overtakes income.
  */
-export function cashFlowSeries(all: Tx[], key: Period, lang: Language = "id", now = new Date()) {
+export function cashFlowTrend(all: Tx[], key: Period, p: Profile, items: Planned[] = [], lang: Language = "id", now = new Date()) {
   const { start, end } = periodRange(key, now, lang);
-  const last = end.getTime() > now.getTime() && typeof key === "string" ? now : end;
-  const days = Math.max(1, Math.round((last.getTime() - start.getTime()) / DAY));
-  const unit: "day" | "week" | "month" = days <= 14 ? "day" : days <= 92 ? "week" : "month";
-  const buckets: { start: Date; end: Date; label: string; income: number; expense: number }[] = [];
-  const cursor = new Date(start);
-  while (cursor <= last) {
-    const from = new Date(cursor);
-    if (unit === "day") cursor.setDate(cursor.getDate() + 1);
-    else if (unit === "week") cursor.setDate(cursor.getDate() + 7);
-    else { cursor.setDate(1); cursor.setMonth(cursor.getMonth() + 1); }
-    const to = new Date(Math.min(cursor.getTime() - 1, end.getTime()));
-    const label = unit === "month" ? from.toLocaleDateString(locale(lang), { month: "short" }) : from.toLocaleDateString(locale(lang), { day: "numeric", month: "short" });
-    buckets.push({ start: from, end: to, label, income: 0, expense: 0 });
+  const projected = end.getTime() >= now.getTime() - DAY; // presets end today; a past range has no projection
+  const anchor = new Date(Math.min(end.getTime(), now.getTime()));
+  anchor.setHours(23, 59, 59, 999);
+  const span = Math.max(1, Math.round((anchor.getTime() - start.getTime()) / DAY));
+  const unit: "day" | "week" | "month" = span <= 10 ? "day" : span <= 120 ? "week" : "month";
+  const len = { day: 1, week: 7, month: 30 }[unit];
+  const fmt = (d: Date) => d.toLocaleDateString(locale(lang), unit === "month" ? { month: "short" } : { day: "numeric", month: "short" });
+
+  // Windows end at the anchor and step back; a first window shorter than half a step is left out.
+  const points: TrendPoint[] = [];
+  for (let to = anchor.getTime(); to > start.getTime(); to -= len * DAY) {
+    const from = Math.max(start.getTime(), to - len * DAY + 1);
+    if (to - from < (len * DAY) / 2 && points.length) break;
+    const s0 = new Date(from), e0 = new Date(to);
+    const inWin = all.filter((t) => { const d = Date.parse(t.date); return d >= from && d <= to; });
+    const sum = summarize(inWin);
+    points.unshift({ start: s0, end: e0, label: fmt(unit === "month" ? e0 : s0), income: sum.revenue, expense: sum.expense, forecast: false });
   }
-  for (const t of all) {
-    const d = new Date(t.date);
-    const b = buckets.find((x) => d >= x.start && d <= x.end);
-    if (b) b[t.type] += t.amount;
+  // Skip the empty stretch before the first record (e.g. "this year" for a shop that started in August).
+  const first = all.reduce((m, t) => Math.min(m, Date.parse(t.date)), Infinity);
+  while (points.length > 2 && points[0]!.end.getTime() < first) points.shift();
+  const today = points.length - 1;
+
+  if (projected) {
+    const f = forecastCash(all, p, items, 30, now);
+    const open = openPlanned(items);
+    const steps = { day: 7, week: 5, month: 2 }[unit];
+    for (let i = 0; i < steps; i++) {
+      const from = new Date(anchor.getTime() + i * len * DAY + 1);
+      const to = new Date(anchor.getTime() + (i + 1) * len * DAY);
+      const bills = open.filter((o) => { const d = Date.parse(`${o.due}T12:00:00`); return d >= from.getTime() && d <= to.getTime(); }).reduce((s, o) => s + o.amount, 0);
+      points.push({ start: from, end: to, label: fmt(unit === "month" ? to : from), income: Math.round(f.dailyIn * len), expense: Math.round(f.dailyOut * len + bills), forecast: true });
+    }
   }
-  return { unit, buckets };
+
+  // First projected crossing, interpolated between two points (t = 0..1 along that segment).
+  let cross: { from: number; t: number; days: number } | null = null;
+  for (let i = Math.max(1, today + 1); i < points.length && !cross; i++) {
+    const a = points[i - 1]!, b = points[i]!;
+    if (b.expense > b.income) {
+      const d0 = a.expense - a.income, d1 = b.expense - b.income;
+      const t = d0 >= 0 ? 0 : -d0 / (d1 - d0);
+      cross = { from: i - 1, t, days: Math.max(0, Math.round((i - 1 - today + t) * len)) };
+    }
+  }
+  return { unit, points, today, cross };
 }
 
 /** Transactions from `from` (inclusive) to `to` (exclusive) days back, counted from the end of today. */

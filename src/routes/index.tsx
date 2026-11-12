@@ -426,8 +426,8 @@ function ReportsView({ period, onPeriod, onPickRange, onAsk, onEdit, onImport }:
         <Kpi label={t("kpiNetMargin")} value={pct(totals.net)} accent />
       </div>
 
-      <ChartCard title={lang === "en" ? "Income vs expense" : "Pemasukan vs pengeluaran"} hint={lang === "en" ? "Tap a column to see its numbers." : "Ketuk kolom untuk melihat angkanya."} icon={<ChartColumn size={16} />}>
-        <CashFlowChart all={ledger} period={period} lang={lang} />
+      <ChartCard title={lang === "en" ? "Income vs expense" : "Pemasukan vs pengeluaran"} hint={lang === "en" ? "Solid = actual, dashed = projection. Tap the chart to see the numbers." : "Garis utuh = aktual, putus-putus = proyeksi. Ketuk grafik untuk melihat angkanya."} icon={<ChartColumn size={16} />}>
+        <CashFlowChart all={ledger} period={period} profile={profile} planned={planned} lang={lang} />
       </ChartCard>
       <ChartCard title={lang === "en" ? "Where your money goes" : "Kemana uangmu pergi"} hint={lang === "en" ? "Expenses by category in this period." : "Pengeluaran per kategori di periode ini."} icon={<ChartPie size={16} />}>
         <SpendingBreakdown txs={txs} lang={lang} />
