@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { parseAmount, parseCsv, suggestCategory, toCsv } from "@/lib/csv";
-import { cashBalance, cashFlowSeries, categoryLabel, expenseBreakdown, dateInputValue, defaultProfile, forecastCash, getInsights, getStatements, parseLedger, type Planned, type Tx } from "@/lib/financials";
+import { cashBalance, cashFlowTrend, categoryLabel, expenseBreakdown, dateInputValue, defaultProfile, forecastCash, getInsights, getStatements, parseLedger, type Planned, type Tx } from "@/lib/financials";
 import { reportTables } from "@/lib/export";
 import { localFinixReply } from "@/lib/finix-local";
 import { installment, lenders, purposeLabel, scoreLender } from "@/lib/scoring";
@@ -262,15 +262,24 @@ describe("data grafik", () => {
     expect(rows.map((r) => r.label)).toContain("Delivery");
   });
 
-  it("pemasukan dan pengeluaran per bucket menjumlah ke total periode", () => {
-    const week = cashFlowSeries(ledger, "week");
-    expect(week.unit).toBe("day");
-    expect(week.buckets).toHaveLength(7);
-    const year = cashFlowSeries(ledger, "year");
-    expect(year.unit).toBe("month");
-    const q = cashFlowSeries(ledger, "quarter");
-    const inQ = getStatements(ledger, "quarter", defaultProfile).totals;
-    expect(q.buckets.reduce((s, b) => s + b.income, 0)).toBe(inQ.revenue);
-    expect(q.buckets.reduce((s, b) => s + b.expense, 0)).toBe(inQ.expense);
-  });
+  it("garis aktual sampai hari ini, lalu proyeksi dengan titik persilangan", () => {
+    const flat = getStatements(ledger, "quarter", defaultProfile).totals;
+    const q = cashFlowTrend(ledger, "quarter", defaultProfile, []);
+    expect(q.unit).toBe("week");
+    const actual = q.points.filter((p) => !p.forecast);
+    expect(q.points.slice(q.today + 1).every((p) => p.forecast)).toBe(true);
+    expect(actual.reduce((s, p) => s + p.income, 0)).toBeLessThanOrEqual(flat.revenue);
+    expect(cashFlowTrend(ledger, "week", defaultProfile, []).unit).toBe("day");
+    expect(cashFlowTrend(ledger, "year", defaultProfile, []).unit).toBe("month");
+
+    // A big bill due in 9 days pushes projected spending above income around then.
+    const withBill = cashFlowTrend(ledger, "quarter", defaultProfile, [plan("expense", 9000000, 9)]);
+    expect(withBill.cross).not.toBeNull();
+    expect(withBill.cross!.days).toBeGreaterThanOrEqual(1);
+    expect(withBill.cross!.days).toBeLessThanOrEqual(14);
+
+    // A range that ended in the past has no projection.
+    const past = cashFlowTrend(ledger, { from: inDays(-80), to: inDays(-40) }, defaultProfile, []);
+    expect(past.points.every((p) => !p.forecast)).toBe(true);
+});
 });
