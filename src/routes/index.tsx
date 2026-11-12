@@ -43,6 +43,7 @@ import { PinGate } from "@/components/PinSheet";
 import { hasPin, requestPin, usePinRequest, withPin } from "@/lib/pin";
 import { Chips, DateInput, Label, MoneyInput } from "@/components/fields";
 import { signOut, startCloud, useAuth } from "@/lib/cloud";
+import { SHOW_HOME_FINANCING_CARDS } from "@/lib/features";
 import { csvTemplate, parseCsv, suggestCategory, type CsvResult } from "@/lib/csv";
 import { exportReportPdf, exportTransactionsCsv } from "@/lib/export";
 import { addTransaction, addTransactions, categoryLabel, dateInputToIso, dateInputValue, expenseCategories, getInsights, getStatements, incomeCategories, logActivity, periodRange, periods, removeTransaction, resetLedger, rollingDays, rp, setAiConsent, summarize, updateProfile, updateTransaction, useAiConsent, useLedger, usePlanned, useProfile, type Category, type Period, type PeriodKey, type Tx } from "@/lib/financials";
@@ -154,17 +155,6 @@ function FinixGate({ children }: { children: ReactNode }) {
   const { t } = useTranslation();
   if (granted) return <>{children}</>;
   return <main className="pb-6 pt-6"><ConsentGate feature={t("finixConsentFeature")}>{children}</ConsentGate></main>;
-}
-
-/**
- * Kontrol tampilan fitur "Funding Match" (Ajukan Modal) dan "Shop Insurance" (Asuransi Toko) di Beranda.
- * Set `false` untuk menyembunyikan dari UI pengguna (default saat ini).
- * Ubah menjadi `true` jika suatu saat ingin memunculkan kembali kedua menu tersebut.
- */
-export let SHOW_HOME_FINANCING_CARDS = false;
-
-export function setHomeFinancingCardsVisible(visible: boolean) {
-  SHOW_HOME_FINANCING_CARDS = visible;
 }
 
 function HomeView({ onNavigate, onAdd, onEdit }: { onNavigate: (view: View) => void; onAdd: (type: Tx["type"]) => void; onEdit: (tx: Tx) => void }) {

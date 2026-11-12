@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Route, setHomeFinancingCardsVisible, SHOW_HOME_FINANCING_CARDS } from "@/routes/index";
+import { setHomeFinancingCardsVisible, SHOW_HOME_FINANCING_CARDS } from "@/lib/features";
+import { Route } from "@/routes/index";
 
 // Device mode, whatever the developer's own .env says.
 vi.mock("@/lib/env", () => ({ cloudEnabled: false, supabaseUrl: "", supabaseAnonKey: "" }));
